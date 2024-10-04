@@ -31,4 +31,11 @@ npx web-push generate-vapid-keys --json
 ## Deployment
 Commit and push all changes to the `main` branch of your GitHub repository. This will trigger the workflow to deploy the AWS resources.
 
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## Disclaimer
+This content was produced under U.S. Department of Education, Office of Special Education Programs, Award No. H373Q220002. Project Officer, Eric Caruso. The views expressed herein do not necessarily represent the positions or policies of the U.S. Department of Education. No official endorsement by the U.S. Department of Education of any product, commodity, service, or enterprise mentioned in this website is intended or should be inferred.
+
+## Acknowledgments
+ADAPT is developed by [AEM Corporation](https://www.aemcorp.com/) under the Weiss Center. 
