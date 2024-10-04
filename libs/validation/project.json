@@ -1,0 +1,29 @@
+{
+  "name": "validation",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/validation/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/validation",
+        "main": "libs/validation/src/index.ts",
+        "tsConfig": "libs/validation/tsconfig.lib.json",
+        "assets": ["libs/validation/*.md"]
+      }
+    },
+    "lint": {
+      "executor": "@nx/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": [
+          "libs/validation/**/*.ts",
+          "libs/validation/package.json"
+        ]
+      }
+    }
+  },
+  "tags": []
+}

@@ -1,0 +1,18 @@
+new AdaptNodeLambda(this, "editDataViewHandler", {
+    prefix: props.stage,
+    handler: "handler",
+    entry: path.join(__dirname, ".", "./handlers/editDataView/editDataView.ts"),
+    attachPolicies: [
+      new Policy(this, "editDataView", {
+          statements: [
+            new PolicyStatement({
+              effect: Effect.ALLOW,
+              actions: [],
+              resources: [],
+            }),
+          ],
+        })
+      ],
+    environment: {}
+  }),
+}

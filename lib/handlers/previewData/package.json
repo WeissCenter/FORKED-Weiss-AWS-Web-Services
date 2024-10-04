@@ -1,0 +1,17 @@
+{
+  "name": "previewdata",
+  "version": "1.0.0",
+  "description": "",
+  "main": "previewData.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "kysely": "^0.27.4",
+    "mssql": "^11.0.1",
+    "xlsx": "^0.18.5"
+  }
+}

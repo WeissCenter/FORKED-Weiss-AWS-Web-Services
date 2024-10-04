@@ -1,0 +1,12 @@
+{
+  "name": "addnewdatasource",
+  "version": "1.0.0",
+  "description": "",
+  "main": "addNewDataSource.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

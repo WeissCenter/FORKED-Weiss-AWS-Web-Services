@@ -1,0 +1,18 @@
+new AdaptNodeLambda(this, "getReportHandler", {
+    prefix: props.stage,
+    handler: "handler",
+    entry: path.join(__dirname, ".", "./handlers/getReport/getReport.ts"),
+    attachPolicies: [
+      new Policy(this, "getReport", {
+          statements: [
+            new PolicyStatement({
+              effect: Effect.ALLOW,
+              actions: [],
+              resources: [],
+            }),
+          ],
+        })
+      ],
+    environment: {}
+  }),
+}
