@@ -1,4 +1,4 @@
-import { StringTemplate } from '../ITemplate';
+import { StringTemplate } from "../ITemplate";
 
 export interface QuickSummary {
   heading: StringTemplate | string;

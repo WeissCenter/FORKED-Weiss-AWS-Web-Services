@@ -1,4 +1,4 @@
 export enum ReportVisibility {
-  EXTERNAL = 'external',
-  INTERNAL = 'internal',
+  EXTERNAL = "external",
+  INTERNAL = "internal",
 }

@@ -4,6 +4,8 @@ import {
   CreateBackendErrorResponse,
   getReportFromDynamo,
   ReportVersion,
+  getReportVersionsFromDynamo,
+  IReport,
 } from "../../../libs/types/src";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocument } from "@aws-sdk/lib-dynamodb";
@@ -12,26 +14,47 @@ import { DynamoDBDocument } from "@aws-sdk/lib-dynamodb";
 const REPORT_TABLE = process.env.REPORT_TABLE || "";
 
 // AWS SDK Clients
-const client = new DynamoDBClient({region: 'us-east-1'});
+const client = new DynamoDBClient({ region: "us-east-1" });
 const db = DynamoDBDocument.from(client);
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
-  try{
-    const id = event.pathParameters?.['reportID'];
-    if(!id){
-        return CreateBackendErrorResponse(400, 'reportID is required')
+  try {
+    const id = event.pathParameters?.["reportId"];
+    if (!id) {
+      return CreateBackendErrorResponse(400, "reportId is required");
     }
-    const version  = (event?.queryStringParameters?.['version'] ?? 'draft') as ReportVersion;
+    const version = (event?.queryStringParameters?.["version"] ??
+      "draft") as ReportVersion;
 
-    const report = await getReportFromDynamo(db, REPORT_TABLE, id, version)
+    const lang = event?.queryStringParameters?.["lang"];
 
-    return CreateBackendResponse(200, report)
-}catch(err){
+    if (!lang || !lang.length) {
+      const reports = (await getReportVersionsFromDynamo(
+        db,
+        REPORT_TABLE,
+        id,
+      )) as IReport[];
+
+      const draftReports = reports.filter((rpt) => rpt.version === version);
+
+      return CreateBackendResponse(200, draftReports);
+    }
+
+    const report = await getReportFromDynamo(
+      db,
+      REPORT_TABLE,
+      id,
+      version,
+      lang,
+    );
+
+    return CreateBackendResponse(200, report);
+  } catch (err) {
     console.error(err);
-    return CreateBackendErrorResponse(500, 'failed to retrieve reports')
-}
+    return CreateBackendErrorResponse(500, "failed to retrieve reports");
+  }
 };

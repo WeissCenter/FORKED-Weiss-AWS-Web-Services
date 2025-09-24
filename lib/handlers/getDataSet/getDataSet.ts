@@ -15,7 +15,7 @@ const db = DynamoDBDocument.from(client);
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   try {
@@ -41,7 +41,7 @@ export const handler: Handler = async (
     if (!result?.Item) {
       return CreateBackendErrorResponse(
         404,
-        `Dataset ${dataSetID} does not exist`
+        `Dataset ${dataSetID} does not exist`,
       );
     }
 

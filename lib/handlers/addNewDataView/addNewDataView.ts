@@ -28,7 +28,7 @@ const cloudwatch = new CloudWatchLogsClient({ region: "us-east-1" });
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   try {
@@ -46,10 +46,10 @@ export const handler: Handler = async (
       newDataView,
       newDataViewID,
       logStream,
-      cloudwatch
+      cloudwatch,
     );
   } catch (err) {
-    console.log(err);
+    console.error(err);
     return CreateBackendErrorResponse(500, "Failed to create new data view");
   }
 };
@@ -75,18 +75,18 @@ async function handleFileCollection(
   newDataView: NewDataViewInput,
   newDataViewID: string,
   logStream: string,
-  cloudwatch: CloudWatchLogsClient
+  cloudwatch: CloudWatchLogsClient,
 ) {
   const collection = await getDataCollectionTemplate(
     db,
     TEMPLATES_TABLE,
-    newDataView.data.id
+    newDataView.data.id,
   );
 
   if (!collection) {
     return CreateBackendErrorResponse(
       404,
-      `collection ${newDataView.data.id} does not exist`
+      `collection ${newDataView.data.id} does not exist`,
     );
   }
 
@@ -123,7 +123,7 @@ async function handleFileCollection(
     logStream,
     username,
     EventType.CREATE,
-    `DataView: ${newDataViewID} was created`
+    `DataView: ${newDataViewID} was created`,
   );
 
   return CreateBackendResponse(200, newDataViewDBItem);

@@ -35,9 +35,10 @@ import {
 
 // Define Environment Variables
 const TABLE_NAME = process.env.TABLE_NAME || "";
-const SUPPRESSION_SERVICE_FUNCTION = process.env.SUPPRESSION_SERVICE_FUNCTION || "";
+const SUPPRESSION_SERVICE_FUNCTION =
+  process.env.SUPPRESSION_SERVICE_FUNCTION || "";
 const CATALOG = process.env.CATALOG || "";
-const ATHENA_QUERY_RATE = parseInt(process.env.ATHENA_QUERY_RATE || "FIXME:");
+const ATHENA_QUERY_RATE = parseInt(process.env.ATHENA_QUERY_RATE || "1000");
 
 // AWS SDK Clients
 const client = new DynamoDBClient({ region: "us-east-1" });
@@ -56,7 +57,7 @@ const queryBuilder = new Kysely<any>({
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   try {
@@ -64,9 +65,14 @@ export const handler: Handler = async (
       return CreateBackendErrorResponse(400, "Missing body");
     }
 
-    const dataSetID = event.pathParameters ? event.pathParameters["dataSetID"] : null;
+    const dataSetID = event.pathParameters
+      ? event.pathParameters["dataSetID"]
+      : null;
     if (!dataSetID) {
-      return CreateBackendErrorResponse(400, "Missing dataSetID in path parameters");
+      return CreateBackendErrorResponse(
+        400,
+        "Missing dataSetID in path parameters",
+      );
     }
 
     const previewSuppression =
@@ -81,12 +87,12 @@ export const handler: Handler = async (
     if (!dataSet.lastPull) {
       return CreateBackendErrorResponse(
         400,
-        "A Pull has not been run for this data set"
+        "A Pull has not been run for this data set",
       );
     }
 
     const { operations, suppression } = JSON.parse(
-      event.body
+      event.body,
     ) as GetDataFromDataSetInput;
 
     const dataSetIDCode = dataSet.dataSetID.replace(/[-]/g, "_");
@@ -101,7 +107,7 @@ export const handler: Handler = async (
               let query = queryBuilder
                 .selectFrom(dataSetIDCode)
                 .select(({ fn, val, ref }: any) => [
-                  fn.sum(cast(sumField.field, "integer")).as("sum"),
+                  fn.sum(cast(sumField.field, "double")).as("sum"),
                 ]);
 
               if (conditions.length) {
@@ -115,14 +121,15 @@ export const handler: Handler = async (
               const resultSet = await queryAthena(
                 compiled,
                 athenaClient,
-                ATHENA_QUERY_RATE
+                ATHENA_QUERY_RATE,
               );
 
               console.log("SUM RESULTSET", resultSet);
 
               const [column, sum] = resultSet.Rows;
 
-              const sumInt = parseInt(sum["Data"][0]["VarCharValue"]);
+              //  I think this is where the NaN is coming from
+              const sumInt = parseFloat(sum["Data"][0]["VarCharValue"]);
 
               return { id: operation.id, value: sumInt };
               break;
@@ -158,7 +165,7 @@ export const handler: Handler = async (
               const resultSet = await queryAthena(
                 compiled,
                 athenaClient,
-                ATHENA_QUERY_RATE
+                ATHENA_QUERY_RATE,
               );
 
               console.log("SELECT RESULTSET", resultSet);
@@ -189,7 +196,7 @@ export const handler: Handler = async (
               const resultSet = await queryAthena(
                 compiled,
                 athenaClient,
-                ATHENA_QUERY_RATE
+                ATHENA_QUERY_RATE,
               );
 
               const [column, count] = resultSet.Rows;
@@ -223,8 +230,8 @@ export const handler: Handler = async (
                 .selectFrom(dataSetIDCode)
                 .select(({ fn }: any) =>
                   fields.value.map((field) =>
-                    fn[func](cast(field, "integer")).as(field)
-                  )
+                    fn[func](cast(field, "double")).as(field),
+                  ),
                 )
 
                 .groupBy(groupby.value);
@@ -252,7 +259,7 @@ export const handler: Handler = async (
               const resultSet = await queryAthena(
                 compiled,
                 athenaClient,
-                ATHENA_QUERY_RATE
+                ATHENA_QUERY_RATE,
               );
 
               console.log("GROUPBY RESULTSET", resultSet);
@@ -266,7 +273,7 @@ export const handler: Handler = async (
           console.error("OPERATION FAILED", operation);
           throw err;
         }
-      })
+      }),
     );
 
     if (previewSuppression && suppression.required) {
@@ -274,8 +281,7 @@ export const handler: Handler = async (
         FunctionName: SUPPRESSION_SERVICE_FUNCTION,
         Payload: JSON.stringify({
           data: aggregateResults,
-          frequencyColumns: suppression.frequencyColumns,
-          sensitiveColumns: suppression.sensitiveColumns,
+          ...suppression,
         }),
         LogType: LogType.Tail,
       });
@@ -310,8 +316,8 @@ function createConditions(query, conditions: DataSetOperationArgument[]) {
         }
 
         return eb(field.field, "=", `'${field.value}'`);
-      })
-    )
+      }),
+    ),
   );
 
   return query;
@@ -343,7 +349,7 @@ function mapAthenaQueryResults(resultSet: ResultSet) {
         Object.assign(accum, {
           [ColumnInfo[idx].Name]: mapDatum(val, ColumnInfo[idx].Type),
         }),
-      {}
+      {},
     );
 
     return subData;
@@ -353,7 +359,7 @@ function mapAthenaQueryResults(resultSet: ResultSet) {
 async function queryAthena(
   compiled,
   athenaClient: AthenaClient,
-  ATHENA_QUERY_RATE = 1000
+  ATHENA_QUERY_RATE = 1000,
 ) {
   const athenaCommand = new StartQueryExecutionCommand({
     QueryString: compiled.sql,
@@ -377,7 +383,7 @@ async function queryAthena(
   const resultSet = await getQueryResult(
     athenaClient,
     startCommandResult.QueryExecutionId,
-    ATHENA_QUERY_RATE
+    ATHENA_QUERY_RATE,
   );
   return resultSet;
 }
@@ -430,7 +436,7 @@ function mapField(field: { field: string; type: string; value: any }) {
 async function getQueryResult(
   athena: AthenaClient,
   id: string,
-  ATHENA_QUERY_RATE = 1000
+  ATHENA_QUERY_RATE = 1000,
 ) {
   let status = "UNKNOWN";
   do {
@@ -459,7 +465,7 @@ async function getQueryResult(
 
 function handleSelect<DB, TB extends keyof DB, O>(
   query: SelectQueryBuilder<DB, TB, O>,
-  field: DataSetOperationArgument
+  field: DataSetOperationArgument,
 ) {
   if (field.array) {
     const args = [];
@@ -487,7 +493,7 @@ function handleSelect<DB, TB extends keyof DB, O>(
 
 function cast(
   expr: string,
-  type: ColumnDataType
+  type: ColumnDataType,
 ): AliasableExpression<unknown> {
   return sql`cast("${sql.raw(expr)}" as ${sql.raw(type)})`;
 }

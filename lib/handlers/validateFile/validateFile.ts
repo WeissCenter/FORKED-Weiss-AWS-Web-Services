@@ -11,7 +11,7 @@ import { ValidationTemplate } from "../../../libs/validation/src/lib/types/Valid
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocument } from "@aws-sdk/lib-dynamodb";
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import * as xlsx from 'xlsx';
+import * as xlsx from "xlsx";
 
 // Define Environment Variables
 const DATA_SOURCE_TABLE = process.env.DATA_SOURCE_TABLE || "";
@@ -25,23 +25,18 @@ const s3Client = new S3Client({ region: "us-east-1" });
 
 export const handler: Handler = async (
   event: APIGatewayEvent | S3CreateEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   if ((event as S3CreateEvent).Records) {
     const s3Event = event as S3CreateEvent;
-
 
     for (const record of s3Event.Records) {
       const { key } = record.s3.object;
 
       const [dataView] = key.split("/");
 
-      const item = await getDataView(
-        db,
-        DATA_SOURCE_TABLE,
-        dataView
-      );
+      const item = await getDataView(db, DATA_SOURCE_TABLE, dataView);
 
       if (!item) {
         return CreateBackendErrorResponse(404, "data view not found");
@@ -50,14 +45,14 @@ export const handler: Handler = async (
       if (item.dataViewType !== "collection") {
         return CreateBackendErrorResponse(
           400,
-          "data view type is not supported by validation"
+          "data view type is not supported by validation",
         );
       }
 
       const collection = await getDataCollectionTemplate(
         db,
         TEMPLATE_TABLE,
-        item.data.id
+        item.data.id,
       );
 
       if (!collection) {
@@ -69,7 +64,7 @@ export const handler: Handler = async (
         await updateDataView(dataView, item, false, db);
         return CreateBackendErrorResponse(
           400,
-          "data view and collection mismatch"
+          "data view and collection mismatch",
         );
       }
 
@@ -158,11 +153,7 @@ export const handler: Handler = async (
 
       console.log("originFile", originFile);
 
-      const item = await getDataView(
-        db,
-        DATA_SOURCE_TABLE,
-        dataViewID
-      );
+      const item = await getDataView(db, DATA_SOURCE_TABLE, dataViewID);
 
       if (!item) {
         return CreateBackendErrorResponse(404, "data view not found");
@@ -171,7 +162,7 @@ export const handler: Handler = async (
       if (item.dataViewType !== "collection") {
         return CreateBackendErrorResponse(
           400,
-          "data view type is not supported by validation"
+          "data view type is not supported by validation",
         );
       }
 
@@ -182,7 +173,7 @@ export const handler: Handler = async (
       if (item.valid === undefined || item.valid === null) {
         return CreateBackendResponse(
           202,
-          `data file ${originFile} is still being validated`
+          `data file ${originFile} is still being validated`,
         );
       }
 
@@ -204,7 +195,7 @@ async function updateDataView(
   dataView: string,
   item: DataView,
   valid: boolean,
-  db: DynamoDBDocument
+  db: DynamoDBDocument,
 ) {
   const updateParams = {
     TableName: DATA_SOURCE_TABLE,

@@ -1,5 +1,5 @@
-import { IRenderedTemplate } from '../ITemplate';
-import { ReportVisibility } from '../ReportVisibility';
+import { IRenderedTemplate } from "../ITemplate";
+import { ReportVisibility } from "../ReportVisibility";
 
 export interface ReportDBItem {
   type: string;

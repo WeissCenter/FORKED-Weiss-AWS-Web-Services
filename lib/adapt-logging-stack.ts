@@ -4,7 +4,7 @@ import { AdaptStackProps } from "./adpat-stack-props";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 
 export class AdaptLoggingStack extends cdk.Stack {
-    logGroup: LogGroup;
+  logGroup: LogGroup;
 
   constructor(scope: Construct, id: string, props: AdaptStackProps) {
     super(scope, id, props);
@@ -14,6 +14,5 @@ export class AdaptLoggingStack extends cdk.Stack {
       retention: RetentionDays.INFINITE,
     });
     this.logGroup = adaptLogging;
-
   }
 }

@@ -16,7 +16,6 @@ export interface AdaptStaticSiteProps extends AdaptStackProps {}
  * The site redirects from HTTP to HTTPS, using a CloudFront distribution
  */
 export class AdaptStaticSite extends cdk.Stack {
-  
   constructor(scope: Construct, id: string, props: AdaptStaticSiteProps) {
     super(scope, id, props);
 
@@ -25,7 +24,7 @@ export class AdaptStaticSite extends cdk.Stack {
       "cloudfront-OAI",
       {
         comment: `OAI for ${props.stage} static site`,
-      }
+      },
     );
 
     // Content bucket
@@ -55,10 +54,10 @@ export class AdaptStaticSite extends cdk.Stack {
         resources: [siteBucket.arnForObjects("*")],
         principals: [
           new iam.CanonicalUserPrincipal(
-            cloudfrontOAI.cloudFrontOriginAccessIdentityS3CanonicalUserId
+            cloudfrontOAI.cloudFrontOriginAccessIdentityS3CanonicalUserId,
           ),
         ],
-      })
+      }),
     );
     new CfnOutput(this, "Bucket", { value: siteBucket.bucketName });
 

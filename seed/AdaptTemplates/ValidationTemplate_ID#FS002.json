@@ -1,0 +1,86 @@
+{
+  "type": "ValidationTemplate",
+  "id": "ID#FS002",
+  "description": "",
+  "fields": "",
+  "files": "",
+  "filters": "",
+  "metaTags": "",
+  "multiFile": "",
+  "name": "General FS002 Spec Validator",
+  "pages": "",
+  "rules": [
+    {
+      "name": "Header Validate",
+      "validator": {
+        "type": "header",
+        "schema": [
+          {
+            "name": "file-type",
+            "errorText": "The system has recognized that you have uploaded the wrong file.",
+            "type": "string",
+            "array": true,
+            "value": ["SEA CHILDREN WITH DISABILITIES"]
+          },
+          {
+            "type": "number",
+            "name": "total-records-in-file",
+            "errorText": "The system has encountered an error regarding the total records column of the file."
+          },
+          {
+            "name": "file-name",
+            "errorText": "The system has encountered an error regarding the file name of the file. The file name did not match the required structure.",
+            "regex": "^[A-Z]{2}(SEA|LEA|SCH)CWDBLIDEA[A-Za-z0-9]{7}(\\.csv)$",
+            "type": "string",
+            "maxLength": 25
+          },
+          {
+            "type": "string",
+            "name": "file-identifier"
+          },
+          {
+            "name": "file-reporting-period",
+            "errorText": "The system has encountered an error regarding the reporting year of the file. The reporting year did not match the required structure.",
+            "regex": "^\\d{4}[- ]\\d{4}$",
+            "type": "string"
+          },
+          {
+            "type": "string",
+            "name": "filler",
+            "maxLength": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "Row Count Validate",
+      "validator": {
+        "type": "rowCount",
+        "errorText": "The system has encountered an error regarding the number of records in this file. The file did not have the same number of records as specified in the header.",
+        "value": {
+          "headerIndex": 1
+        }
+      }
+    },
+    {
+      "name": "Validate Year",
+      "validator": {
+        "type": "typeFieldCheck",
+        "schema": [
+          {
+            "name": "Year Check",
+            "errorText": "The system has recognized that you have uploaded the wrong file for this school year.",
+            "type": "select",
+            "value": {
+              "field": "reportingYear",
+              "headerIndex": 4
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "sortableCategories": "",
+  "suppression": "",
+  "title": ""
+}

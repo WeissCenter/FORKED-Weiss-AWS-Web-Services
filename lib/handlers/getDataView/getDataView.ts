@@ -15,7 +15,7 @@ const db = DynamoDBDocument.from(client);
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   try {
@@ -41,7 +41,7 @@ export const handler: Handler = async (
     if (!result?.Item) {
       return CreateBackendErrorResponse(
         404,
-        `Data View ${dataViewID} does not exist`
+        `Data View ${dataViewID} does not exist`,
       );
     }
 

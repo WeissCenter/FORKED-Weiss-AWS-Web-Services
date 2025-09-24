@@ -13,7 +13,7 @@ import { DynamoDBDocument } from "@aws-sdk/lib-dynamodb";
 
 // Define Environment Variables
 const TABLE_NAME = process.env.TABLE_NAME || "";
-const LOG_GROUP = process.env.LOG_GROUP || '';
+const LOG_GROUP = process.env.LOG_GROUP || "";
 
 // AWS SDK Clients
 const client = new DynamoDBClient({ region: "us-east-1" });
@@ -22,12 +22,14 @@ const cloudwatch = new CloudWatchLogsClient({ region: "us-east-1" });
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   const logStream = aws_generateDailyLogStreamID();
   const username = getUserDataFromEvent(event).username;
-  const dataSourceID = event.pathParameters ? event.pathParameters["dataSourceID"] : null;
+  const dataSourceID = event.pathParameters
+    ? event.pathParameters["dataSourceId"]
+    : null;
 
   try {
     if (!dataSourceID) {
@@ -50,7 +52,7 @@ export const handler: Handler = async (
       logStream,
       username,
       EventType.DELETE,
-      `DataSource: ${dataSourceID} was deleted`
+      `DataSource: ${dataSourceID} was deleted`,
     );
 
     return CreateBackendResponse(200);
@@ -63,7 +65,7 @@ export const handler: Handler = async (
       logStream,
       username,
       EventType.DELETE,
-      `DataSource: ${dataSourceID} failed to delete: ${JSON.stringify(err)}`
+      `DataSource: ${dataSourceID} failed to delete: ${JSON.stringify(err)}`,
     );
 
     return CreateBackendErrorResponse(500, "failed to delete data source");

@@ -23,7 +23,7 @@ const db = DynamoDBDocument.from(client);
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   try {
@@ -38,13 +38,7 @@ export const handler: Handler = async (
 
     const result = await db.get(userActivityUpdate);
 
-    let userActivity = result.Item as UserActivity;
-
-    if (!userActivity)
-      return CreateBackendErrorResponse(
-        500,
-        "failed to retrieve settings for the application"
-      );
+    let userActivity = (result.Item as UserActivity) || {};
 
     // do a check on the cache expiry and if an item updated or not
 
@@ -61,7 +55,7 @@ export const handler: Handler = async (
 async function handleCacheUpdates(
   db: DynamoDBDocument,
   username: string,
-  userActivity: UserActivity
+  userActivity: UserActivity,
 ) {
   const cache = userActivity.cache;
 
@@ -89,10 +83,10 @@ async function handleCacheUpdates(
         db,
         REPORT_TABLE,
         cache.body.reportID,
-        cache.body.version
+        cache.body.version,
       );
       // was updated
-      if (Number(report.updated) > cache.added) {
+      if (report && Number(report.updated) > cache.added) {
         userActivity.cache.dirty = true;
       }
       break;
@@ -101,23 +95,19 @@ async function handleCacheUpdates(
       const dataSource = await getDatasourceMetadata(
         db,
         DATA_TABLE,
-        cache.body.dataSourceID
+        cache.body.dataSourceID,
       );
       // was updated
-      if (Number(dataSource!.updated) > cache.added) {
+      if (dataSource && Number(dataSource!.updated) > cache.added) {
         userActivity.cache.dirty = true;
       }
       break;
     }
     case "DataView": {
-      const dataView = await getDataView(
-        db,
-        DATA_TABLE,
-        cache.body.dataViewID
-      );
+      const dataView = await getDataView(db, DATA_TABLE, cache.body.dataViewID);
       console.log(dataView);
       // was updated
-      if (Number(dataView!.updated) > cache.added) {
+      if (dataView && Number(dataView!.updated) > cache.added) {
         userActivity.cache.dirty = true;
       }
       break;

@@ -1,6 +1,10 @@
-import { ISection } from './ISection';
+import { IGlossaryTerm } from "./IGlossaryTerm";
+import { ISection } from "./ISection";
 
-export type TemplateType = 'DataCollection' | 'ReportTemplate' | 'ValidationTemplate';
+export type TemplateType =
+  | "DataCollection"
+  | "ReportTemplate"
+  | "ValidationTemplate";
 
 export type ITemplateFilters = Record<string, IFilter<unknown> | IFilterGroup>;
 export interface ITemplate {
@@ -8,6 +12,7 @@ export interface ITemplate {
   title: string;
   description: string;
   metaTags?: string[];
+  reportingLevels?: string[];
   multiFile: boolean;
   suppression: ISuppression;
   filters: ITemplateFilters;
@@ -15,6 +20,11 @@ export interface ITemplate {
   conditionalFilters?: ITemplateFilters;
   pages?: ITemplatePage[];
   sections?: ISection[];
+}
+
+export interface ViewerTemplate extends Omit<ITemplate, "suppression"> {
+  suppression?: ISuppression;
+  suppressed?: boolean; // indicates if the template is suppressed
 }
 
 export interface SortableCategory {
@@ -53,6 +63,7 @@ export interface TemplateContext {
   appliedFilters?: any;
   suppress: boolean;
   template: ITemplate | ISummaryTemplate;
+  glossaryService: Map<string, IGlossaryTerm>;
 }
 
 export interface TemplateFunction {
@@ -67,9 +78,9 @@ export interface StringTemplate {
 }
 
 export enum IFilterType {
-  SELECT = 'select',
-  SEARCH = 'search',
-  RADIAL = 'radial',
+  SELECT = "select",
+  SEARCH = "search",
+  RADIAL = "radial",
 }
 
 export interface RadialFilter {
@@ -92,7 +103,7 @@ export interface IFilter<F> {
   label: string;
   field: string; // what to filter against
   type: IFilterType;
-  dataType: 'number' | 'string';
+  dataType: "number" | "string";
   tags?: Record<string, any>;
   condition?: IFilterCondition;
   filter: F;
@@ -100,7 +111,7 @@ export interface IFilter<F> {
 }
 
 export interface IFilterCondition {
-  operator: 'OR' | 'AND' | 'NOR' | 'NAND';
+  operator: "OR" | "AND" | "NOR" | "NAND";
   pages?: string[];
   conditions: ICondition[];
 }

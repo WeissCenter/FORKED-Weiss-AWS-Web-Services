@@ -17,17 +17,17 @@ export interface DataCollectionFieldDefinition {
 }
 
 export enum DataCollectionFieldType {
-  SELECT = 'select',
-  TEXT = 'text',
+  SELECT = "select",
+  TEXT = "text",
 }
 
 export interface DataCollectionFileCondition {
   field: string;
-  operation: 'neq' | 'eq' | 'contains';
+  operation: "neq" | "eq" | "contains";
   value: any;
 }
 
-export type DataParseDefinitionFrom = 'html' | 'csv';
+export type DataParseDefinitionFrom = "html" | "csv";
 
 export interface ConfigRowMapping {
   field: string;

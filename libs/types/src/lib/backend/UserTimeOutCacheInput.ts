@@ -1,7 +1,11 @@
-export type UserTimeOutCacheAction = 'EDIT' | 'CREATION' | 'GENERIC_SAVE' | 'CLEAR'
+export type UserTimeOutCacheAction =
+  | "EDIT"
+  | "CREATION"
+  | "GENERIC_SAVE"
+  | "CLEAR";
 
-export interface UserTimeOutCacheInput{
-    action: UserTimeOutCacheAction,
-    type: 'DataSource' | 'DataView' | 'Report' | 'Generic'
-    body?: any
+export interface UserTimeOutCacheInput {
+  action: UserTimeOutCacheAction;
+  type: "DataSource" | "DataView" | "Report" | "Generic";
+  body?: any;
 }

@@ -1,5 +1,5 @@
-import { SQLJoinType } from '../SQLJoinType';
-import { DataSetDataSource, DataSetDataSourceRelationship } from './DataSet';
+import { SQLJoinType } from "../SQLJoinType";
+import { DataSetDataSource, DataSetDataSourceRelationship } from "./DataSet";
 
 export interface NewDataSetInput {
   name: string;
