@@ -1,5 +1,5 @@
 export enum DataSourceStatus {
-  DRAFT = 'draft',
-  PUBLISHED = 'published',
-  PENDING_APPROVAL = 'pendingApproval',
+  DRAFT = "draft",
+  PUBLISHED = "published",
+  PENDING_APPROVAL = "pendingApproval",
 }

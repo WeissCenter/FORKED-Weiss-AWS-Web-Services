@@ -1,6 +1,6 @@
-import { DataSourceStatus } from './DataSourceStatus';
-import { DataSourceType } from './DataSourceType';
-import { SQLType } from './SQLType';
+import { DataSourceStatus } from "./DataSourceStatus";
+import { DataSourceType } from "./DataSourceType";
+import { SQLType } from "./SQLType";
 
 export interface DataSource {
   dataSourceID?: string;
@@ -22,8 +22,8 @@ export interface DataSource {
 }
 
 export enum DataSourceFileType {
-  CSV = 'csv',
-  EXCEL = 'excel',
+  CSV = "csv",
+  EXCEL = "excel",
 }
 
 export type DataSourceConnectionInfo = {

@@ -57,32 +57,6 @@ EOF
     )
 
     echo "$typescriptCode" > "$1.ts"
-
-    # Store the modified string in a variable
-    new_handler_code=$(cat <<-EOF
-new AdaptNodeLambda(this, "${1}Handler", {
-    prefix: props.stage,
-    handler: "handler",
-    entry: path.join(__dirname, ".", "./handlers/${1}/${1}.ts"),
-    attachPolicies: [
-      new Policy(this, "${1}", {
-          statements: [
-            new PolicyStatement({
-              effect: Effect.ALLOW,
-              actions: [],
-              resources: [],
-            }),
-          ],
-        })
-      ],
-    environment: {}
-  }),
-}
-EOF
-    )
-
-    # put the new handler code into a txt file for easy copy-pasting
-    echo "$new_handler_code" > "${1}Handler.txt"
 else
     echo "Failed to create folder './lib/handlers/$1'."
     exit 1

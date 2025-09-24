@@ -1,4 +1,5 @@
 export type ShareReport = {
-    reportID: string,
-    filters: Record<string, any>
-}  
+  reportSlug: string;
+  tabIndex: number;
+  filters: Record<string, any>;
+};

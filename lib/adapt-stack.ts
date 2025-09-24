@@ -13,7 +13,7 @@ import { AdaptS3Bucket } from "../constructs/AdaptS3Bucket";
 import { Bucket, EventType, HttpMethods } from "aws-cdk-lib/aws-s3";
 import { Database, Job } from "@aws-cdk/aws-glue-alpha";
 import { LambdaDestination } from "aws-cdk-lib/aws-s3-notifications";
-
+import * as s3express from "aws-cdk-lib/aws-s3express";
 interface AdaptApiStackProps extends AdaptStackProps {
   dynamoTables: { [key: string]: AdaptDynamoTable };
   cognito: {
@@ -25,16 +25,28 @@ interface AdaptApiStackProps extends AdaptStackProps {
   queryResultBucket: AdaptS3Bucket;
   dataCatalog: Database;
   crawlerRole: Role;
+  dataSourceGlueRole: Role;
   glueJob: Job;
+  publishGlueJob: Job;
   suppressionServiceFunction: string;
   logGroup: LogGroup;
+  renderTemplateServiceFunction: AdaptNodeLambda;
+  viewerReportCache: s3express.CfnDirectoryBucket;
+  adminReportCache: s3express.CfnDirectoryBucket;
 }
 
 export class AdaptStack extends cdk.Stack {
   restApi: AdaptRestApi;
+  loggingStatement: PolicyStatement;
 
   constructor(scope: Construct, id: string, props: AdaptApiStackProps) {
     super(scope, id, props);
+
+    this.loggingStatement = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: ["logs:*"],
+      resources: [props.logGroup.logGroupArn],
+    });
 
     const publicAssetsBucket = new AdaptS3Bucket(this, "PublicAssetsBucket", {
       bucketName: `${props.stage}-adaptpublicassetsbucket`,
@@ -70,26 +82,25 @@ export class AdaptStack extends cdk.Stack {
         environment: {
           USER_POOL_ID: props.cognito.userPoolId,
           CLIENT_ID: props.cognito.clientId,
+          LOG_GROUP: props.logGroup.logGroupName,
         },
         depsLockFilePath: path.join(
           __dirname,
-          "handlers/authorizer/package-lock.json"
+          "handlers/authorizer/package-lock.json",
         ),
         attachPolicies: [
           new Policy(this, "CognitoPolicy", {
             statements: [
+              this.loggingStatement,
               new PolicyStatement({
                 effect: Effect.ALLOW,
-                actions: [
-                  "iam:ListRolePolicies",
-                  "iam:GetRolePolicy",
-                ],
+                actions: ["iam:ListRolePolicies", "iam:GetRolePolicy"],
                 resources: ["*"], // TODO: restrict to the cognito user pool
               }),
             ],
           }),
         ],
-      }
+      },
     );
 
     const adaptAdminAuthorizer = new RequestAuthorizer(
@@ -98,7 +109,7 @@ export class AdaptStack extends cdk.Stack {
       {
         handler: adaptAdminAuthorizerHandler,
         identitySources: ["method.request.header.Authorization"],
-      }
+      },
     );
 
     const getDataSetHandler = new AdaptNodeLambda(this, "getDataSetHandler", {
@@ -161,34 +172,6 @@ export class AdaptStack extends cdk.Stack {
       },
     });
 
-    const createShareLinkHandler = new AdaptNodeLambda(
-      this,
-      "createShareLinkHandler",
-      {
-        prefix: props.stage,
-        handler: "handler",
-        entry: path.join(
-          __dirname,
-          ".",
-          "./handlers/createShareLink/createShareLink.ts"
-        ),
-        attachPolicies: [
-          new Policy(this, "createShareLink", {
-            statements: [
-              new PolicyStatement({
-                effect: Effect.ALLOW,
-                actions: ["dynamodb:GetItem", "dynamodb:PutItem"],
-                resources: [props.dynamoTables["shareTable"].tableArn],
-              }),
-            ],
-          }),
-        ],
-        environment: {
-          TABLE_NAME: props.dynamoTables["shareTable"].tableName,
-        },
-      }
-    );
-
     const validateFileHandler = new AdaptNodeLambda(
       this,
       "validateFileHandler",
@@ -198,7 +181,7 @@ export class AdaptStack extends cdk.Stack {
         entry: path.join(
           __dirname,
           ".",
-          "./handlers/validateFile/validateFile.ts"
+          "./handlers/validateFile/validateFile.ts",
         ),
         attachPolicies: [
           new Policy(this, "validateFile", {
@@ -207,6 +190,11 @@ export class AdaptStack extends cdk.Stack {
                 effect: Effect.ALLOW,
                 actions: ["dynamodb:GetItem", "dynamodb:UpdateItem"],
                 resources: [props.dynamoTables["dataSourceTable"].tableArn],
+              }),
+              new PolicyStatement({
+                effect: Effect.ALLOW,
+                actions: ["dynamodb:GetItem"],
+                resources: [props.dynamoTables["templatesTable"].tableArn],
               }),
               new PolicyStatement({
                 effect: Effect.ALLOW,
@@ -222,17 +210,21 @@ export class AdaptStack extends cdk.Stack {
           STAGING_BUCKET: props.stagingBucket.bucketName,
         },
         nodeModules: ["xlsx", "cheerio"],
-      }
+      },
     );
 
-    const existingStageBucket = Bucket.fromBucketAttributes(this, 'ImportedStageBucket', {
-      bucketArn: props.stagingBucket.bucketArn,
-      bucketName: props.stagingBucket.bucketName,
-    });
+    const existingStageBucket = Bucket.fromBucketAttributes(
+      this,
+      "ImportedStageBucket",
+      {
+        bucketArn: props.stagingBucket.bucketArn,
+        bucketName: props.stagingBucket.bucketName,
+      },
+    );
 
     existingStageBucket.addEventNotification(
       EventType.OBJECT_CREATED,
-      new LambdaDestination(validateFileHandler)
+      new LambdaDestination(validateFileHandler),
     );
 
     const restApi = new AdaptRestApi(this, `${props.stage}-AdaptApiStack`, {
@@ -242,7 +234,7 @@ export class AdaptStack extends cdk.Stack {
         clientId: props.cognito.clientId,
       },
       authorizer: adaptAdminAuthorizer,
-      apiName: "AdaptAdminApi",
+      apiName: `${props.stage}-AdaptAdminApi`,
       apiStageName: props.stage,
       endpoints: {
         "/data": {
@@ -252,7 +244,7 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/getDataSources/getDataSources.ts"
+              "./handlers/getDataSources/getDataSources.ts",
             ),
             attachPolicies: [
               new Policy(this, "getDataSources", {
@@ -275,15 +267,25 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/addNewDataSource/addNewDataSource.ts"
+              "./handlers/addNewDataSource/addNewDataSource.ts",
             ),
             attachPolicies: [
               new Policy(this, "addNewDataSource", {
                 statements: [
+                  this.loggingStatement,
                   new PolicyStatement({
                     effect: Effect.ALLOW,
-                    actions: ["dynamodb:PutItem"],
+                    actions: [
+                      "dynamodb:PutItem",
+                      "dynamodb:DeleteItem",
+                      "dynamodb:UpdateItem",
+                    ],
                     resources: [props.dynamoTables["dataSourceTable"].tableArn],
+                  }),
+                  new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: ["iam:PassRole"],
+                    resources: [props.dataSourceGlueRole.roleArn],
                   }),
                   new PolicyStatement({
                     effect: Effect.ALLOW,
@@ -301,6 +303,7 @@ export class AdaptStack extends cdk.Stack {
                       "glue:CreateConnection",
                       "glue:CreateDatabase",
                       "glue:CreateTable",
+                      "glue:DeleteCrawler",
                       "glue:StartCrawler",
                     ],
                     resources: ["*"], // TODO: restrict to the glue database
@@ -324,7 +327,7 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/getDataSource/getDataSource.ts"
+              "./handlers/getDataSource/getDataSource.ts",
             ),
             attachPolicies: [
               new Policy(this, "getDataSource", {
@@ -352,11 +355,12 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/editDataSource/editDataSource.ts"
+              "./handlers/editDataSource/editDataSource.ts",
             ),
             attachPolicies: [
               new Policy(this, "editDataSource", {
                 statements: [
+                  this.loggingStatement,
                   new PolicyStatement({
                     effect: Effect.ALLOW,
                     actions: ["dynamodb:GetItem", "dynamodb:UpdateItem"],
@@ -376,6 +380,7 @@ export class AdaptStack extends cdk.Stack {
                     actions: [
                       "glue:CreateCrawler",
                       "glue:CreateConnection",
+                      "glue:UpdateConnection",
                       "glue:CreateDatabase",
                       "glue:CreateTable",
                       "glue:StartCrawler",
@@ -397,7 +402,7 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/deleteDataSource/deleteDataSource.ts"
+              "./handlers/deleteDataSource/deleteDataSource.ts",
             ),
             attachPolicies: [
               new Policy(this, "deleteDataSource", {
@@ -423,7 +428,7 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/queryDataSource/queryDataSource.ts"
+              "./handlers/queryDataSource/queryDataSource.ts",
             ),
             attachPolicies: [
               new Policy(this, "queryDataSource", {
@@ -438,6 +443,7 @@ export class AdaptStack extends cdk.Stack {
                     actions: ["s3:GetObject"],
                     resources: ["*"], // TODO: restrict to the staging bucket
                   }),
+
                   new PolicyStatement({
                     effect: Effect.ALLOW,
                     actions: ["secretsmanager:GetSecretValue"],
@@ -460,7 +466,7 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/addNewDataSet/addNewDataSet.ts"
+              "./handlers/addNewDataSet/addNewDataSet.ts",
             ),
             attachPolicies: [
               new Policy(this, "addNewDataSet", {
@@ -490,11 +496,13 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/addNewDataView/addNewDataView.ts"
+              "./handlers/addNewDataView/addNewDataView.ts",
             ),
+
             attachPolicies: [
               new Policy(this, "addNewDataView", {
                 statements: [
+                  this.loggingStatement,
                   new PolicyStatement({
                     effect: Effect.ALLOW,
                     actions: ["dynamodb:GetItem"],
@@ -522,7 +530,7 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/startUploadDataViewFile/startUploadDataViewFile.ts"
+              "./handlers/startUploadDataViewFile/startUploadDataViewFile.ts",
             ),
             attachPolicies: [
               new Policy(this, "startUploadDataView", {
@@ -548,11 +556,12 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/editDataView/editDataView.ts"
+              "./handlers/editDataView/editDataView.ts",
             ),
             attachPolicies: [
               new Policy(this, "editDataView", {
                 statements: [
+                  this.loggingStatement,
                   new PolicyStatement({
                     effect: Effect.ALLOW,
                     actions: ["dynamodb:GetItem", "dynamodb:UpdateItem"],
@@ -578,11 +587,12 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/deleteDataView/deleteDataView.ts"
+              "./handlers/deleteDataView/deleteDataView.ts",
             ),
             attachPolicies: [
               new Policy(this, "deleteDataView", {
                 statements: [
+                  this.loggingStatement,
                   new PolicyStatement({
                     effect: Effect.ALLOW,
                     actions: ["dynamodb:DeleteItem"],
@@ -611,7 +621,7 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/getDataFromDataView/getDataFromDataView.ts"
+              "./handlers/getDataFromDataView/getDataFromDataView.ts",
             ),
             attachPolicies: [
               new Policy(this, "getDataFromDataView", {
@@ -619,7 +629,10 @@ export class AdaptStack extends cdk.Stack {
                   new PolicyStatement({
                     effect: Effect.ALLOW,
                     actions: ["dynamodb:GetItem"],
-                    resources: [props.dynamoTables["dataSourceTable"].tableArn],
+                    resources: [
+                      props.dynamoTables["dataSourceTable"].tableArn,
+                      props.dynamoTables["settingsTable"].tableArn,
+                    ],
                   }),
                   new PolicyStatement({
                     effect: Effect.ALLOW,
@@ -629,13 +642,23 @@ export class AdaptStack extends cdk.Stack {
                   new PolicyStatement({
                     effect: Effect.ALLOW,
                     actions: ["s3:*"], // TODO: limit actions
-                    resources: [props.queryResultBucket.bucketArn],
+                    resources: [
+                      props.queryResultBucket.bucketArn,
+                      props.queryResultBucket.bucketArn + "/*",
+                      props.repoBucket.bucketArn,
+                      props.repoBucket.bucketArn + "/*",
+                    ],
                   }),
                   new PolicyStatement({
                     effect: Effect.ALLOW,
-                    actions: ["glue:GetDatabase", "glue:GetTable"],
-                    resources: [props.dataCatalog.catalogArn],
+                    actions: [
+                      "glue:GetDatabase",
+                      "glue:GetTable",
+                      "glue:GetPartitions",
+                    ],
+                    resources: ["*"],
                   }),
+                  //props.dataCatalog.catalogArn
                   new PolicyStatement({
                     effect: Effect.ALLOW,
                     actions: ["athena:*"], // TODO: limit actions
@@ -646,9 +669,10 @@ export class AdaptStack extends cdk.Stack {
             ],
             environment: {
               TABLE_NAME: props.dynamoTables["dataSourceTable"].tableName,
+              SETTINGS_TABLE: props.dynamoTables["settingsTable"].tableName,
               SUPPRESSION_SERVICE_FUNCTION: props.suppressionServiceFunction,
               BUCKET: props.queryResultBucket.bucketName,
-              CATALOG: props.dataCatalog.catalogId,
+              CATALOG: props.dataCatalog.databaseName,
               ATHENA_QUERY_RATE: "1000",
             },
             nodeModules: ["kysely"],
@@ -661,11 +685,12 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/doDataPull/doDataPull.ts"
+              "./handlers/doDataPull/doDataPull.ts",
             ),
             attachPolicies: [
               new Policy(this, "doDataPull", {
                 statements: [
+                  this.loggingStatement,
                   new PolicyStatement({
                     effect: Effect.ALLOW,
                     actions: ["dynamodb:GetItem", "dynamodb:UpdateItem"],
@@ -693,7 +718,7 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/previewData/previewData.ts"
+              "./handlers/previewData/previewData.ts",
             ),
             attachPolicies: [
               new Policy(this, "previewData", {
@@ -730,10 +755,11 @@ export class AdaptStack extends cdk.Stack {
           GET: new AdaptNodeLambda(this, "getReportsHandler", {
             prefix: props.stage,
             handler: "handler",
+            timeout: cdk.Duration.seconds(29),
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/getReports/getReports.ts"
+              "./handlers/getReports/getReports.ts",
             ),
             attachPolicies: [
               new Policy(this, "getReports", {
@@ -756,7 +782,7 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/createReport/createReport.ts"
+              "./handlers/createReport/createReport.ts",
             ),
             attachPolicies: [
               new Policy(this, "createReport", {
@@ -781,14 +807,14 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/getReport/getReport.ts"
+              "./handlers/getReport/getReport.ts",
             ),
             attachPolicies: [
               new Policy(this, "getReport", {
                 statements: [
                   new PolicyStatement({
                     effect: Effect.ALLOW,
-                    actions: ["dynamodb:GetItem"],
+                    actions: ["dynamodb:GetItem", "dynamodb:Query"],
                     resources: [props.dynamoTables["reportTable"].tableArn],
                   }),
                 ],
@@ -804,21 +830,164 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/editReport/editReport.ts"
+              "./handlers/editReport/editReport.ts",
             ),
             attachPolicies: [
               new Policy(this, "editReport", {
                 statements: [
+                  this.loggingStatement,
                   new PolicyStatement({
                     effect: Effect.ALLOW,
-                    actions: ["dynamodb:GetItem", "dynamodb:UpdateItem"],
-                    resources: [props.dynamoTables["reportTable"].tableArn],
+                    actions: ["translate:TranslateText"],
+                    resources: ["*"],
+                  }),
+                  new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: ["s3:*", "s3express:*"], // TODO: restrict
+                    resources: [
+                      props.adminReportCache.attrArn,
+                      `${props.adminReportCache.attrArn}/*`,
+                    ],
+                  }),
+                  new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: [
+                      "dynamodb:GetItem",
+                      "dynamodb:PutItem",
+                      "dynamodb:UpdateItem",
+                      "dynamodb:Query",
+                      "dynamodb:DeleteItem",
+                    ],
+                    resources: [
+                      props.dynamoTables["reportTable"].tableArn,
+                      props.dynamoTables["templatesTable"].tableArn,
+                    ],
+                  }),
+                  new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: [
+                      "dynamodb:GetItem",
+                      "dynamodb:Query",
+                      "dynamodb:ConditionCheckItem",
+                      "dynamodb:Scan",
+                    ],
+                    resources: [props.dynamoTables["templatesTable"].tableArn],
                   }),
                 ],
               }),
             ],
             environment: {
               REPORT_TABLE: props.dynamoTables["reportTable"].tableName,
+              LOG_GROUP: props.logGroup.logGroupName,
+              CACHE_BUCKET: props.adminReportCache.bucketName!,
+              TEMPLATE_TABLE: props.dynamoTables["templatesTable"].tableName,
+            },
+          }),
+        },
+        "/report/{reportId}/data": {
+          POST: new AdaptNodeLambda(this, "getReportDataHandler", {
+            prefix: props.stage,
+            handler: "handler",
+            timeout: cdk.Duration.seconds(60),
+            entry: path.join(
+              __dirname,
+              ".",
+              "./handlers/getReportData/getReportData.ts",
+            ),
+            attachPolicies: [
+              new Policy(this, "getReportData", {
+                statements: [
+                  new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: ["translate:TranslateText"],
+                    resources: ["*"],
+                  }),
+                  new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: ["dynamodb:Query", "dynamodb:PutItem"],
+                    resources: [props.dynamoTables["reportTable"].tableArn],
+                  }),
+                  new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: ["s3:*", "s3express:*"], // TODO: restrict
+                    resources: [
+                      props.adminReportCache.attrArn,
+                      `${props.adminReportCache.attrArn}/*`,
+                    ],
+                  }),
+                  new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: ["dynamodb:GetItem"],
+                    resources: [
+                      props.dynamoTables["dataSourceTable"].tableArn,
+                      props.dynamoTables["reportTable"].tableArn,
+                    ],
+                  }),
+                  new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: [
+                      "dynamodb:GetItem",
+                      "dynamodb:Query",
+                      "dynamodb:ConditionCheckItem",
+                      "dynamodb:Scan",
+                    ],
+                    resources: [props.dynamoTables["templatesTable"].tableArn],
+                  }),
+                  new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: ["lambda:InvokeFunction"],
+                    resources: [
+                      props.renderTemplateServiceFunction.functionArn,
+                    ], // TODO: restrict to suppression service
+                  }),
+                ],
+              }),
+            ],
+            environment: {
+              TABLE_NAME: props.dynamoTables["reportTable"].tableName,
+              DATA_TABLE: props.dynamoTables["dataSourceTable"].tableName,
+              TEMPLATE_TABLE: props.dynamoTables["templatesTable"].tableName,
+              BUCKET: props.queryResultBucket.bucketName,
+              CACHE_BUCKET: props.adminReportCache.bucketName!,
+              CATALOG: props.dataCatalog.databaseName,
+              RENDER_TEMPLATE_FUNCTION:
+                props.renderTemplateServiceFunction.functionName,
+              ATHENA_QUERY_RATE: "1000",
+            },
+          }),
+        },
+        "/report/{reportId}/translate": {
+          POST: new AdaptNodeLambda(this, "translateReportTextHandler", {
+            prefix: props.stage,
+            handler: "handler",
+            entry: path.join(
+              __dirname,
+              ".",
+              "./handlers/translateReportText/translateReportText.ts",
+            ),
+            attachPolicies: [
+              new Policy(this, "translateReportTextPolicy", {
+                statements: [
+                  this.loggingStatement,
+                  new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: ["translate:TranslateText"],
+                    resources: ["*"],
+                  }),
+                  new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: ["dynamodb:Query", "dynamodb:GetItem"],
+                    resources: [
+                      props.dynamoTables["reportTable"].tableArn,
+                      props.dynamoTables["settingsTable"].tableArn,
+                    ],
+                  }),
+                ],
+              }),
+            ],
+            environment: {
+              REPORT_TABLE: props.dynamoTables["reportTable"].tableName,
+              SETTINGS_TABLE: props.dynamoTables["settingsTable"].tableName,
               LOG_GROUP: props.logGroup.logGroupName,
             },
           }),
@@ -830,11 +999,12 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/publishReport/publishReport.ts"
+              "./handlers/publishReport/publishReport.ts",
             ),
             attachPolicies: [
               new Policy(this, "publishReport", {
                 statements: [
+                  this.loggingStatement,
                   new PolicyStatement({
                     effect: Effect.ALLOW,
                     actions: ["dynamodb:GetItem"],
@@ -843,7 +1013,15 @@ export class AdaptStack extends cdk.Stack {
                   new PolicyStatement({
                     effect: Effect.ALLOW,
                     actions: ["glue:StartJobRun"],
-                    resources: ["*"], // TODO: restrict to the glue job
+                    resources: [props.publishGlueJob.jobArn], // TODO: restrict to the glue job
+                  }),
+                  new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: ["logs:*"],
+                    resources: [
+                      props.publishGlueJob.jobArn,
+                      props.glueJob.jobArn,
+                    ],
                   }),
                 ],
               }),
@@ -851,7 +1029,7 @@ export class AdaptStack extends cdk.Stack {
             environment: {
               REPORT_TABLE: props.dynamoTables["reportTable"].tableName,
               LOG_GROUP: props.logGroup.logGroupName,
-              GLUE_JOB: props.glueJob.jobName,
+              GLUE_JOB: props.publishGlueJob.jobName,
             },
           }),
         },
@@ -862,11 +1040,12 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/unPublishReport/unPublishReport.ts"
+              "./handlers/unPublishReport/unPublishReport.ts",
             ),
             attachPolicies: [
               new Policy(this, "unPublishReport", {
                 statements: [
+                  this.loggingStatement,
                   new PolicyStatement({
                     effect: Effect.ALLOW,
                     actions: [
@@ -876,12 +1055,21 @@ export class AdaptStack extends cdk.Stack {
                     ],
                     resources: [props.dynamoTables["reportTable"].tableArn],
                   }),
+                  new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: ["s3:*", "s3express:*"], // TODO: restrict
+                    resources: [
+                      props.viewerReportCache.attrArn,
+                      `${props.viewerReportCache.attrArn}/*`,
+                    ],
+                  }),
                 ],
               }),
             ],
             environment: {
               REPORT_TABLE: props.dynamoTables["reportTable"].tableName,
               LOG_GROUP: props.logGroup.logGroupName,
+              VIEWER_REPORT_CACHE: props.viewerReportCache.bucketName!,
             },
           }),
         },
@@ -892,7 +1080,7 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/getSettings/getSettings.ts"
+              "./handlers/getSettings/getSettings.ts",
             ),
             attachPolicies: [
               new Policy(this, "getSettings", {
@@ -915,7 +1103,7 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/updateSettings/updateSettings.ts"
+              "./handlers/updateSettings/updateSettings.ts",
             ),
             attachPolicies: [
               new Policy(this, "updateSettings", {
@@ -940,7 +1128,7 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/startSettingsLogoUpload/startSettingsLogoUpload.ts"
+              "./handlers/startSettingsLogoUpload/startSettingsLogoUpload.ts",
             ),
             attachPolicies: [
               new Policy(this, "startSettingsLogoUpload", {
@@ -958,6 +1146,32 @@ export class AdaptStack extends cdk.Stack {
             },
           }),
         },
+        "/settings/glossary": {
+          GET: new AdaptNodeLambda(this, "getAdaptGlossary", {
+            prefix: props.stage,
+            handler: "handler",
+            entry: path.join(
+              __dirname,
+              ".",
+              "./handlers/getGlossary/getGlossary.ts",
+            ),
+            attachPolicies: [
+              new Policy(this, "getAdaptGlossaryPolicy", {
+                statements: [
+                  new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: ["dynamodb:GetItem"],
+                    resources: [props.dynamoTables["settingsTable"].tableArn],
+                  }),
+                ],
+              }),
+            ],
+            environment: {
+              SETTINGS_TABLE: props.dynamoTables["settingsTable"].tableName,
+            },
+          }),
+        },
+
         "/template/{templateType}": {
           GET: getTemplateHandler,
         },
@@ -978,6 +1192,7 @@ export class AdaptStack extends cdk.Stack {
                     resources: [
                       props.dynamoTables["dataSourceTable"].tableArn,
                       props.dynamoTables["templatesTable"].tableArn,
+                      props.dynamoTables["reportTable"].tableArn,
                     ],
                   }),
                 ],
@@ -996,9 +1211,13 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/recordEvent/recordEvent.ts"
+              "./handlers/recordEvent/recordEvent.ts",
             ),
-            attachPolicies: [],
+            attachPolicies: [
+              new Policy(this, "recordEvent", {
+                statements: [this.loggingStatement],
+              }),
+            ],
             environment: {
               LOG_GROUP: props.logGroup.logGroupName,
             },
@@ -1011,7 +1230,7 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/registerPushNotifications/registerPushNotifications.ts"
+              "./handlers/registerPushNotifications/registerPushNotifications.ts",
             ),
             attachPolicies: [
               new Policy(this, "registerPushNotifications", {
@@ -1039,17 +1258,11 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/testDBConnection/testDBConnection.ts"
+              "./handlers/testDBConnection/testDBConnection.ts",
             ),
             attachPolicies: [],
             environment: {},
           }),
-        },
-        "/share": {
-          POST: createShareLinkHandler,
-        },
-        "/share/{slug}": {
-          GET: createShareLinkHandler,
         },
         "/user": {
           GET: new AdaptNodeLambda(this, "getUserActivityHandler", {
@@ -1058,7 +1271,7 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/getUserActivity/getUserActivity.ts"
+              "./handlers/getUserActivity/getUserActivity.ts",
             ),
             attachPolicies: [
               new Policy(this, "getUserActivity", {
@@ -1066,7 +1279,11 @@ export class AdaptStack extends cdk.Stack {
                   new PolicyStatement({
                     effect: Effect.ALLOW,
                     actions: ["dynamodb:*"], // TODO: limit actions
-                    resources: [props.dynamoTables["dataSourceTable"].tableArn, props.dynamoTables["reportTable"].tableArn, props.dynamoTables["userActivityTable"].tableArn],
+                    resources: [
+                      props.dynamoTables["dataSourceTable"].tableArn,
+                      props.dynamoTables["reportTable"].tableArn,
+                      props.dynamoTables["userActivityTable"].tableArn,
+                    ],
                   }),
                 ],
               }),
@@ -1076,23 +1293,22 @@ export class AdaptStack extends cdk.Stack {
               REPORT_TABLE: props.dynamoTables["reportTable"].tableName,
               DATA_TABLE: props.dynamoTables["dataSourceTable"].tableName,
             },
-          })
+          }),
         },
         "/users": {
           GET: new AdaptNodeLambda(this, "getUsersHandler", {
             prefix: props.stage,
             handler: "handler",
-            entry: path.join(
-              __dirname,
-              ".",
-              "./handlers/getUsers/getUsers.ts"
-            ),
+            entry: path.join(__dirname, ".", "./handlers/getUsers/getUsers.ts"),
             attachPolicies: [
               new Policy(this, "getUsers", {
                 statements: [
                   new PolicyStatement({
                     effect: Effect.ALLOW,
-                    actions: ["iam:ListUsers", "iam:AdminListGroupsForUserCommand"],
+                    actions: [
+                      "cognito-idp:ListUsers",
+                      "cognito-idp:AdminListGroupsForUser",
+                    ],
                     resources: ["*"], // TODO: restrict to the UserPoolId
                   }),
                 ],
@@ -1100,6 +1316,35 @@ export class AdaptStack extends cdk.Stack {
             ],
             environment: {
               USER_POOL_ID: props.cognito.userPoolId,
+            },
+          }),
+          PUT: new AdaptNodeLambda(this, "editUserHandler", {
+            prefix: props.stage,
+            handler: "handler",
+            entry: path.join(__dirname, ".", "./handlers/editUser/editUser.ts"),
+            attachPolicies: [
+              new Policy(this, "editUser", {
+                statements: [
+                  this.loggingStatement,
+                  new PolicyStatement({
+                    effect: Effect.ALLOW,
+                    actions: [
+                      "cognito-idp:ListUsers",
+                      "cognito-idp:AdminRemoveUserFromGroup",
+                      "cognito-idp:AdminGetUser",
+                      "cognito-idp:AdminAddUserToGroup",
+                      "cognito-idp:AdminDisableUser",
+                      "cognito-idp:AdminEnableUser",
+                      "cognito-idp:AdminListGroupsForUser",
+                    ],
+                    resources: ["*"], // TODO: restrict to the UserPoolId
+                  }),
+                ],
+              }),
+            ],
+            environment: {
+              USER_POOL_ID: props.cognito.userPoolId,
+              LOG_GROUP: props.logGroup.logGroupName,
             },
           }),
         },
@@ -1110,15 +1355,18 @@ export class AdaptStack extends cdk.Stack {
             entry: path.join(
               __dirname,
               ".",
-              "./handlers/userTimeoutCache/userTimeoutCache.ts"
+              "./handlers/userTimeoutCache/userTimeoutCache.ts",
             ),
             attachPolicies: [
               new Policy(this, "userTimeoutCache", {
                 statements: [
+                  this.loggingStatement,
                   new PolicyStatement({
                     effect: Effect.ALLOW,
                     actions: ["dynamodb:UpdateItem"],
-                    resources: [props.dynamoTables["userActivityTable"].tableArn],
+                    resources: [
+                      props.dynamoTables["userActivityTable"].tableArn,
+                    ],
                   }),
                 ],
               }),
@@ -1128,7 +1376,7 @@ export class AdaptStack extends cdk.Stack {
               LOG_GROUP: props.logGroup.logGroupName,
             },
           }),
-        }
+        },
       },
     });
     this.restApi = restApi;

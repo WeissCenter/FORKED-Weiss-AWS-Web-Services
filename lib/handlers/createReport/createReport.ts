@@ -18,7 +18,7 @@ const db = DynamoDBDocument.from(client);
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   const fullName = getUserDataFromEvent(event).fullName;
@@ -34,15 +34,18 @@ export const handler: Handler = async (
 
     const newReportItem = {
       type: "Report",
-      id: `ID#${newReportID}#Version#draft`,
+      id: `ID#${newReportID}#Version#draft#Lang#en`,
       reportID: newReportID,
       updated: `${Date.now()}`,
       version: "draft",
       template: body.template,
       dataView: body.dataView,
       author: fullName,
+      slug: body.slug,
       visibility: body.visibility,
       name: body.name,
+      lang: "en",
+      reportingLevel: body.reportingLevel,
     };
 
     const putParams = {
@@ -53,7 +56,7 @@ export const handler: Handler = async (
     await db.put(putParams);
     return CreateBackendResponse(200, newReportID);
   } catch (err) {
-    console.log(err);
+    console.error(err);
     return CreateBackendErrorResponse(500, "Failed to create report");
   }
 };

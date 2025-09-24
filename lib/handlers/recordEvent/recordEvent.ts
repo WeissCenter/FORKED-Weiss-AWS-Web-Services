@@ -17,7 +17,7 @@ const client = new CloudWatchLogsClient({ region: "us-east-1" });
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   const username = getUserDataFromEvent(event).username;
@@ -40,7 +40,7 @@ export const handler: Handler = async (
       username,
       EventType.USER,
       userEvent,
-      extraMeta
+      extraMeta,
     );
 
     return CreateBackendResponse(200, "event recorded");

@@ -15,7 +15,7 @@ const db = DynamoDBDocument.from(client);
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   try {
@@ -52,16 +52,21 @@ export const handler: Handler = async (
     if (!template.Item)
       return CreateBackendErrorResponse(
         404,
-        "requested template does not exist"
+        "requested template does not exist",
       );
 
     return CreateBackendResponse(200, template.Item);
   } catch (err) {
+    console.error(err);
     return CreateBackendErrorResponse(500, "Failed to retrieve data sources");
   }
 };
 
-async function getTemplates(db: DynamoDBDocument, templateType: string) {
+async function getTemplates(
+  db: DynamoDBDocument,
+  templateType: string,
+  withLanguages = false,
+) {
   const params = {
     TableName: TABLE_NAME,
     KeyConditionExpression: "#type = :type",
@@ -83,6 +88,11 @@ async function getTemplates(db: DynamoDBDocument, templateType: string) {
 
     accumulated = [...accumulated, ...(result.Items || [])];
   } while (lastKey);
+
+  // Manually filter out the languages options
+  if (!withLanguages && templateType === "ReportTemplate") {
+    accumulated = accumulated.filter((item) => !item.id.includes("#LANG#"));
+  }
 
   return CreateBackendResponse(200, accumulated || []);
 }

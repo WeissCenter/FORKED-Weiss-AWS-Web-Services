@@ -11,7 +11,10 @@ import {
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocument } from "@aws-sdk/lib-dynamodb";
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { GetSecretValueCommand, SecretsManagerClient } from "@aws-sdk/client-secrets-manager";
+import {
+  GetSecretValueCommand,
+  SecretsManagerClient,
+} from "@aws-sdk/client-secrets-manager";
 import {
   Kysely,
   DummyDriver,
@@ -45,7 +48,7 @@ const queryBuilder = new Kysely<any>({
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   try {
@@ -61,7 +64,7 @@ export const handler: Handler = async (
     if (!dataView) {
       return CreateBackendErrorResponse(
         404,
-        `Data View with ID ${dataViewID} does not exist`
+        `Data View with ID ${dataViewID} does not exist`,
       );
     }
 
@@ -100,7 +103,7 @@ async function handleFile(dataView: DataView) {
 
         const fileData = await result.Body.transformToString();
 
-        const csv = xlsx.read(fileData, { type: "string", sheetRows: 10 });
+        const csv = xlsx.read(fileData, { type: "string", sheetRows: 11 });
 
         return {
           file: file.id,
@@ -110,7 +113,7 @@ async function handleFile(dataView: DataView) {
             defval: "",
           }),
         };
-      })
+      }),
   );
 
   return CreateBackendResponse(200, allRecords);
@@ -119,7 +122,7 @@ async function handleFile(dataView: DataView) {
 async function handleSQL(
   dataView: DataView,
   secrets: SecretsManagerClient,
-  db: DynamoDBClient
+  db: DynamoDBClient,
 ) {
   const dataSource = dataView.data.dataSource;
 
@@ -131,14 +134,14 @@ async function handleSQL(
   const dataSourceMetadata = await getDatasourceMetadata(
     db,
     TABLE_NAME,
-    dataSource
+    dataSource,
   );
 
   // TODO: determine if this error handling is correct
   if (!dataSourceMetadata) {
     return CreateBackendErrorResponse(
       404,
-      `Data Source with ID ${dataSource} does not exist`
+      `Data Source with ID ${dataSource} does not exist`,
     );
   }
   const url = dataSourceMetadata.path;
@@ -156,72 +159,12 @@ async function handleSQL(
   if (!response.SecretString) {
     return CreateBackendErrorResponse(
       500,
-      `Failed to retrieve connection info for ${dataSourceMetadata.dataSourceID}`
+      `Failed to retrieve connection info for ${dataSourceMetadata.dataSourceID}`,
     );
   }
 
   const decryptedConnectionInfo = JSON.parse(response.SecretString);
 
-  const allRecords = await Promise.all(
-    dataView.data.files.map(async (file) => {
-      // TODO: determine if this error handling is correct
-      if (!file.database) {
-        throw new Error(`Database information is missing for file ${file.id}`);
-      }
-      const query = buildQuery(file.database.query, dataView.data.fields);
-
-      switch (decryptedConnectionInfo.type) {
-        case SQLType.MSSQL: {
-          return {
-            file: file.id,
-            records: await handleMSSQL(decryptedConnectionInfo, url, query, 10),
-          };
-        }
-        case SQLType.MYSQL: {
-          // TODO: Implement these
-          break;
-        }
-        case SQLType.POSTGRES: {
-          // TODO: Implement these
-          break;
-        }
-      }
-    })
-  );
-
-  return CreateBackendResponse(200, allRecords);
-}
-
-function buildQuery(base: string, dataViewFields: DataViewField[]) {
-  const vars = dataViewFields.reduce(
-    (accum, field) => Object.assign(accum, { [field.id]: field.value }),
-    {}
-  );
-
-  const query = dynamicSQLTemplate(base, { sql: SQL, ...vars });
-
-  return query.compile(queryBuilder) as CompiledQuery;
-}
-
-function dynamicSQLTemplate(template: string, vars = {}) {
-  const handler = new Function(
-    "vars",
-    [
-      "const tagged = ( " + Object.keys(vars).join(", ") + " ) =>",
-      "sql`" + template + "`",
-      "return tagged(...Object.values(vars))",
-    ].join("\n")
-  );
-
-  return handler(vars);
-}
-
-async function handleMSSQL(
-  decryptedConnectionInfo: any,
-  url: string,
-  query: CompiledQuery,
-  limit?: number
-) {
   const configParams = {
     user: decryptedConnectionInfo.username,
     password: decryptedConnectionInfo.password,
@@ -239,6 +182,67 @@ async function handleMSSQL(
 
   const pool = await sql.connect(configParams);
 
+  const allRecords = await Promise.all(
+    dataView.data.files.map(async (file) => {
+      // TODO: determine if this error handling is correct
+      if (!file.database) {
+        throw new Error(`Database information is missing for file ${file.id}`);
+      }
+      const query = buildQuery(file.database.query, dataView.data.fields);
+
+      switch (decryptedConnectionInfo.type) {
+        case SQLType.MSSQL: {
+          return {
+            file: file.id,
+            records: await handleMSSQL(pool, query, 10),
+          };
+        }
+        case SQLType.MYSQL: {
+          // TODO: Implement these
+          break;
+        }
+        case SQLType.POSTGRES: {
+          // TODO: Implement these
+          break;
+        }
+      }
+    }),
+  );
+
+  await pool.close();
+
+  return CreateBackendResponse(200, allRecords);
+}
+
+function buildQuery(base: string, dataViewFields: DataViewField[]) {
+  const vars = dataViewFields.reduce(
+    (accum, field) => Object.assign(accum, { [field.id]: field.value }),
+    {},
+  );
+
+  const query = dynamicSQLTemplate(base, { sql: SQL, ...vars });
+
+  return query.compile(queryBuilder) as CompiledQuery;
+}
+
+function dynamicSQLTemplate(template: string, vars = {}) {
+  const handler = new Function(
+    "vars",
+    [
+      "const tagged = ( " + Object.keys(vars).join(", ") + " ) =>",
+      "sql`" + template + "`",
+      "return tagged(...Object.values(vars))",
+    ].join("\n"),
+  );
+
+  return handler(vars);
+}
+
+async function handleMSSQL(
+  pool: sql.ConnectionPool,
+  query: CompiledQuery,
+  limit?: number,
+) {
   const request = pool.request();
 
   for (const [index, param] of query.parameters.entries()) {
@@ -247,7 +251,7 @@ async function handleMSSQL(
 
   const result = await request.query(query.sql);
 
-  await pool.close();
+  // await pool.close();
 
   return limit !== undefined
     ? result.recordset.slice(0, limit)

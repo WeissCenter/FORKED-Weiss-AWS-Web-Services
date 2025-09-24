@@ -17,7 +17,7 @@ const db = DynamoDBDocument.from(client);
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   try {
@@ -27,20 +27,19 @@ export const handler: Handler = async (
 
     const body = JSON.parse(event.body) as IsUniqueInput;
 
+    const field = body.field ?? "name";
+
     const params = {
-      TableName:
-        body.type === "Report"
-          ? REPORT_TABLE_NAME
-          : TABLE_NAME,
+      TableName: body.type === "Report" ? REPORT_TABLE_NAME : TABLE_NAME,
       KeyConditionExpression: "#type = :type",
-      FilterExpression: "#name = :name",
+      FilterExpression: "#field = :value",
       ExpressionAttributeNames: {
         "#type": "type",
-        "#name": "name",
+        "#field": field,
       },
       ExpressionAttributeValues: {
         ":type": body.type,
-        ":name": body.name,
+        ":value": body.name,
       },
     };
 
@@ -48,9 +47,10 @@ export const handler: Handler = async (
 
     return CreateBackendResponse(
       200,
-      result.Items === undefined || result.Items.length <= 0
+      result.Items === undefined || result.Items.length <= 0,
     );
   } catch (err) {
+    console.error(err);
     return CreateBackendErrorResponse(500, "failed to check name unique");
   }
 };

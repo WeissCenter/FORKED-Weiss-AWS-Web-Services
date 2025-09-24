@@ -7,9 +7,16 @@ import { AuthorizerAPIGatewayLambda } from "../../../function-interfaces/api-gat
 import { CognitoJwtVerifier } from "aws-jwt-verify";
 import { JwtExpiredError } from "aws-jwt-verify/error";
 import { APIGatewayAuthorizerResult } from "aws-lambda";
+import { CloudWatchLogsClient } from "@aws-sdk/client-cloudwatch-logs";
+import {
+  aws_generateDailyLogStreamID,
+  aws_LogEvent,
+  EventType,
+} from "../../../libs/types/src";
 
 const USER_POOL_ID = process.env.USER_POOL_ID || "";
 const CLIENT_ID = process.env.CLIENT_ID || "";
+const LOG_GROUP = process.env.LOG_GROUP || "";
 
 const iam_client = new IAMClient();
 
@@ -62,14 +69,14 @@ async function getPolicyDocumentStatementForRole(iam_client, role: string) {
   const response: any[] = [];
   const roleName = role.split("/")[1];
   const listRolePoliciesResponse = await iam_client.send(
-    new ListRolePoliciesCommand({ RoleName: roleName })
+    new ListRolePoliciesCommand({ RoleName: roleName }),
   );
   for (const policy of listRolePoliciesResponse["PolicyNames"]) {
     const getPolicyResponse = await iam_client.send(
-      new GetRolePolicyCommand({ RoleName: roleName, PolicyName: policy })
+      new GetRolePolicyCommand({ RoleName: roleName, PolicyName: policy }),
     );
     const policyDocumentStatements = JSON.parse(
-      decodeURIComponent(getPolicyResponse.PolicyDocument)
+      decodeURIComponent(getPolicyResponse.PolicyDocument),
     )["Statement"];
     for (const statement of policyDocumentStatements) {
       if ("Effect" in statement && statement["Effect"] === "Allow") {
@@ -103,7 +110,7 @@ async function authorizer(authToken): Promise<APIGatewayAuthorizerResult> {
       console.log("Role: ", role);
       const statements = await getPolicyDocumentStatementForRole(
         iam_client,
-        role
+        role,
       );
       console.log("Statements: ", statements);
       policyDocumentStatements.push(...statements);
@@ -136,6 +143,29 @@ export const handler: AuthorizerAPIGatewayLambda = async (event) => {
   }
 
   const response = await authorizer(authToken);
+
+  // any logging
+
+  const methodArn = event.methodArn;
+
+  if (
+    !(response.policyDocument.Statement[0] as any).Resource.includes(
+      methodArn,
+    ) &&
+    response?.context?.username
+  ) {
+    const cloudwatch = new CloudWatchLogsClient({ region: "us-east-1" });
+    const logStream = aws_generateDailyLogStreamID();
+    await aws_LogEvent(
+      cloudwatch,
+      LOG_GROUP,
+      logStream,
+      response.context!.username as string,
+      EventType.CREATE,
+      `User tried to access a resource they were not authorized for`,
+      [{ label: "method", value: methodArn }],
+    );
+  }
 
   console.debug("Authorizer response: ", JSON.stringify(response));
   return response;

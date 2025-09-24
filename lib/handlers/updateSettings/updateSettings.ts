@@ -17,7 +17,7 @@ const db = DynamoDBDocument.from(client);
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   try {
@@ -42,7 +42,7 @@ export const handler: Handler = async (
   } catch (err) {
     return CreateBackendErrorResponse(
       500,
-      "failed to retrieve settings for the application"
+      "failed to update settings for the application",
     );
   }
 };

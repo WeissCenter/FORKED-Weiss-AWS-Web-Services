@@ -3,11 +3,11 @@ import {
   PutLogEventsCommand,
   CreateLogStreamCommand,
   DescribeLogStreamsCommand,
-} from '@aws-sdk/client-cloudwatch-logs';
-import { EventType } from '../EventType';
+} from "@aws-sdk/client-cloudwatch-logs";
+import { EventType } from "../EventType";
 
 export function aws_generateDailyLogStreamID() {
-  return `${new Date().toLocaleDateString('en-us', { day: 'numeric', year: 'numeric', month: 'numeric' })}-daily-logs`;
+  return `${new Date().toLocaleDateString("en-us", { day: "numeric", year: "numeric", month: "numeric" })}-daily-logs`;
 }
 
 export async function aws_LogEvent(
@@ -17,7 +17,7 @@ export async function aws_LogEvent(
   userID: string,
   eventType: EventType,
   event: string,
-  extraMeta: { label: string; value: string }[] = []
+  extraMeta: { label: string; value: string }[] = [],
 ) {
   const checkIfLogStreamExistsCommand = new DescribeLogStreamsCommand({
     logGroupName: group,
@@ -28,14 +28,21 @@ export async function aws_LogEvent(
 
   if (!existsResult?.logStreams?.length) {
     // create the log stream here
-    const createCommand = new CreateLogStreamCommand({ logGroupName: group, logStreamName: stream });
+    const createCommand = new CreateLogStreamCommand({
+      logGroupName: group,
+      logStreamName: stream,
+    });
 
     await cloudwatch.send(createCommand);
   }
 
-  const metaFields = [{ label: 'user', value: userID }, { label: 'type', value: eventType }, ...extraMeta]
+  const metaFields = [
+    { label: "user", value: userID },
+    { label: "type", value: eventType },
+    ...extraMeta,
+  ]
     .map((item) => `${item.label}=${item.value}`)
-    .join(',');
+    .join(",");
 
   const cloudWatchInput = {
     logGroupName: group,

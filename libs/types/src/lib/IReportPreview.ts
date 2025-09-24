@@ -1,7 +1,7 @@
-import { DataView } from './DataView';
-import { IRenderedTemplate } from './ITemplate';
-import { ReportVisibility } from './ReportVisibility';
-import { DataSet } from './backend/DataSet';
+import { DataView } from "./DataView";
+import { IRenderedTemplate } from "./ITemplate";
+import { ReportVisibility } from "./ReportVisibility";
+import { DataSet } from "./backend/DataSet";
 
 export interface IReportPreview {
   dataView: DataView;

@@ -1,0 +1,71 @@
+{
+  "type": "ValidationTemplate",
+  "id": "ID#childCountAndSettings",
+  "description": "",
+  "fields": "",
+  "files": "",
+  "filters": "",
+  "metaTags": "",
+  "multiFile": "",
+  "name": "General IDEA Part C Child Count and Settings Spec Validator",
+  "pages": "",
+  "rules": [
+    {
+      "name": "Header Validate",
+      "validator": {
+        "type": "headerHTML",
+        "schema": [
+          {
+            "name": "state-name",
+            "errorText": "The system has recognized that you have uploaded the wrong file.",
+            "type": "string",
+            "element": {
+              "index": 0,
+              "tag": "h1"
+            }
+          },
+          {
+            "name": "file-type",
+            "errorText": "The system has recognized that you have uploaded the wrong file.",
+            "regex": "IDEA Part C - Child Count and Settings Release \\d+\\.\\d+",
+            "type": "string",
+            "element": {
+              "index": 1,
+              "tag": "h1"
+            }
+          },
+          {
+            "name": "year",
+            "errorText": "The system has recognized that you have uploaded the wrong file.",
+            "regex": "Year: \\d{4}-\\d{2}",
+            "type": "string",
+            "element": {
+              "index": 2,
+              "tag": "h1"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Validate Year",
+      "validator": {
+        "type": "typeFieldCheckHTML",
+        "schema": [
+          {
+            "name": "Year Check",
+            "type": "select",
+            "value": "reportingYear",
+            "element": {
+              "index": 2,
+              "tag": "h1"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "sortableCategories": "",
+  "suppression": "",
+  "title": ""
+}

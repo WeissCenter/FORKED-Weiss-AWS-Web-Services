@@ -48,6 +48,7 @@ const API_PERMISSIONS: PermissionMatrix = {
           `/POST/dataset`,
           `/PUT/data/*`,
           `/DELETE/data/*`,
+          `/POST/test`,
         ],
       },
     ],
@@ -102,13 +103,17 @@ const API_PERMISSIONS: PermissionMatrix = {
     Read: [
       {
         actions: ["execute-api:Invoke"],
-        resources: [`/GET/report`, `/GET/report/*`],
+        resources: [`/GET/report`, `/GET/report/*`, `/POST/report/*/data`],
       },
     ],
     Write: [
       {
         actions: ["execute-api:Invoke"],
-        resources: [`/POST/report`, `/PUT/report/*`],
+        resources: [
+          `/POST/report`,
+          `/PUT/report/*`,
+          `/POST/report/*/translate`,
+        ],
       },
     ],
     Approve: [
@@ -118,26 +123,14 @@ const API_PERMISSIONS: PermissionMatrix = {
       },
     ],
   },
-  // Glossary: {
-  //   Read: [
-  //     {
-  //       actions: ['execute-api:Invoke'],
-  //       resources: [`/{METHOD_HTTP_VERB}/{Resource-path}`],
-  //     },
-  //   ],
-  //   Write: [
-  //     {
-  //       actions: ['execute-api:Invoke'],
-  //       resources: [`/{METHOD_HTTP_VERB}/{Resource-path}`],
-  //     },
-  //   ],
-  //   Approve: [
-  //     {
-  //       actions: ['execute-api:Invoke'],
-  //       resources: [`/{METHOD_HTTP_VERB}/{Resource-path}`],
-  //     },
-  //   ],
-  // },
+  Glossary: {
+    Read: [
+      {
+        actions: ["execute-api:Invoke"],
+        resources: [`/GET/settings/glossary`],
+      },
+    ],
+  },
   Users: {
     Read: [
       {
@@ -145,12 +138,12 @@ const API_PERMISSIONS: PermissionMatrix = {
         resources: [`/GET/users`],
       },
     ],
-    // Write: [
-    //   {
-    //     actions: ['execute-api:Invoke'],
-    //     resources: [`/{METHOD_HTTP_VERB}/{Resource-path}`],
-    //   },
-    // ],
+    Write: [
+      {
+        actions: ["execute-api:Invoke"],
+        resources: ["/PUT/users"],
+      },
+    ],
   },
   "Tool Settings": {
     Read: [
@@ -196,7 +189,7 @@ export class AdaptUserPermissionStack extends cdk.Stack {
   constructor(
     scope: Construct,
     id: string,
-    props: AdaptUserPermissionStackProps
+    props: AdaptUserPermissionStackProps,
   ) {
     super(scope, id, props);
     const userGroupRolePermissions =
@@ -215,7 +208,7 @@ export class AdaptUserPermissionStack extends cdk.Stack {
             effect: Effect.ALLOW,
             actions: [action],
             resources: [...rolePermissions[action]],
-          })
+          }),
         );
       }
       // create user group and attach role
@@ -224,13 +217,14 @@ export class AdaptUserPermissionStack extends cdk.Stack {
         description: `Group for ${role}`,
         groupName: cleanRole,
         roleArn: roleConstruct.roleArn,
+        precedence: appRolePermissions[role].precedence,
       });
     }
   }
 }
 
 function convertAppRolePermissionsToUserGroupRolePermissions(
-  restApi: AdaptRestApi
+  restApi: AdaptRestApi,
 ): UserGroupRolePermissions {
   let userGroupRolePermissions: UserGroupRolePermissions = {};
   //   const apiArnPrefix = "arn:aws:execute-api:*:*:*/*";
@@ -255,9 +249,8 @@ function convertAppRolePermissionsToUserGroupRolePermissions(
                 userGroupRolePermissions[role][action] = new Set();
               }
               for (const resource of permission.resources) {
-                // FIXME: this is a hack to create the api permissions before the api is created
                 userGroupRolePermissions[role][action].add(
-                  `${apiArnPrefix}${resource}`
+                  `${apiArnPrefix}${resource}`,
                 );
               }
             }

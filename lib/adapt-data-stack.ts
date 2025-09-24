@@ -28,7 +28,9 @@ import { AdaptNodeLambda } from "../constructs/AdaptNodeLambda";
 import path from "path";
 import { LogGroup } from "aws-cdk-lib/aws-logs";
 import { LambdaFunction } from "aws-cdk-lib/aws-events-targets";
-
+import { AssetCode, LayerVersion } from "aws-cdk-lib/aws-lambda";
+import { Runtime } from "aws-cdk-lib/aws-lambda";
+import * as s3express from "aws-cdk-lib/aws-s3express";
 interface AdaptDataStackProps extends AdaptStackProps {
   dynamoTables: { [key: string]: AdaptDynamoTable };
   vapidKeys: {
@@ -43,13 +45,24 @@ export class AdaptDataStack extends cdk.Stack {
   repoBucket: AdaptS3Bucket;
   queryResultBucket: AdaptS3Bucket;
   assetsBucket: AdaptS3Bucket;
+  reportDataBucket: AdaptS3Bucket;
   dataCatalog: Database;
+  renderTemplateServiceFunction: AdaptNodeLambda;
   dataPullJob: Job;
+  publishJob: Job;
   dataSourceGlueRole: Role;
   suppressionServiceFunctionName: string;
-
+  loggingStatement: PolicyStatement;
+  adminReportCache: s3express.CfnDirectoryBucket;
+  viewerReportCache: s3express.CfnDirectoryBucket;
   constructor(scope: Construct, id: string, props: AdaptDataStackProps) {
     super(scope, id, props);
+
+    this.loggingStatement = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: ["logs:*"],
+      resources: [props.logGroup.logGroupArn],
+    });
 
     const adaptDataCatalog = new Database(this, `AdaptDataCatalog`, {
       databaseName: `${id}-AdaptDataCatalog`.toLowerCase(),
@@ -62,7 +75,7 @@ export class AdaptDataStack extends cdk.Stack {
       `AdaptDataRepositoryBucket`,
       {
         bucketName: `${id}-AdaptDataRepositoryBucket`,
-      }
+      },
     );
     this.repoBucket = repositoryBucket;
 
@@ -89,7 +102,7 @@ export class AdaptDataStack extends cdk.Stack {
       `AdaptQueryResultBucket`,
       {
         bucketName: `${id}-AdaptQueryResultBucket`,
-      }
+      },
     );
     this.queryResultBucket = queryResultBucket;
 
@@ -97,6 +110,35 @@ export class AdaptDataStack extends cdk.Stack {
       bucketName: `${id}-AdaptAssetsBucket`,
     });
     this.assetsBucket = assetsBucket;
+
+    const reportDataBucket = new AdaptS3Bucket(this, `AdaptReportDataBucket`, {
+      bucketName: `${id}-AdaptReportDataBucket`,
+    });
+    this.reportDataBucket = reportDataBucket;
+
+    // S3 Express Cache Buckets
+
+    const viewerReportCache = new s3express.CfnDirectoryBucket(
+      this,
+      "adaptViewerReportTemplateCache",
+      {
+        bucketName: `${id}-v-rpt-cache--use1-az4--x-s3`.toLowerCase(),
+        dataRedundancy: "SingleAvailabilityZone",
+        locationName: "use1-az4",
+      },
+    );
+    this.viewerReportCache = viewerReportCache;
+
+    const adminReportCache = new s3express.CfnDirectoryBucket(
+      this,
+      "adaptAdminReportTemplateCache",
+      {
+        bucketName: `${id}-a-rpt-cache--use1-az4--x-s3`.toLowerCase(),
+        dataRedundancy: "SingleAvailabilityZone",
+        locationName: "use1-az4",
+      },
+    );
+    this.adminReportCache = adminReportCache;
 
     const gluePolicy = new Policy(this, `${id}-GluePolicy`, {
       statements: [
@@ -117,6 +159,11 @@ export class AdaptDataStack extends cdk.Stack {
         }),
         new PolicyStatement({
           actions: ["dynamodb:*"], // TODO: limit the actions
+          effect: Effect.ALLOW,
+          resources: ["*"], // TODO: determine the correct resources
+        }),
+        new PolicyStatement({
+          actions: ["logs:*"], // TODO: limit the actions
           effect: Effect.ALLOW,
           resources: ["*"], // TODO: determine the correct resources
         }),
@@ -167,7 +214,7 @@ export class AdaptDataStack extends cdk.Stack {
       targets: {
         s3Targets: [
           {
-            path: repositoryBucket.bucketName,
+            path: reportDataBucket.bucketName,
           },
         ],
       },
@@ -182,11 +229,33 @@ export class AdaptDataStack extends cdk.Stack {
       this,
       `${id}-PythonScripts`,
       {
-        sources: [Source.asset(`scripts`)],
+        sources: [Source.asset(`./scripts`)],
         destinationBucket: assetsBucket,
         destinationKeyPrefix: "scripts",
-      }
+      },
     );
+
+    const uploadedDataPullLibObject = new BucketDeployment(
+      this,
+      `${id}-DataPullLib`,
+      {
+        sources: [Source.asset(`libs/adapt-data-pull-lib.zip`)],
+        destinationBucket: assetsBucket,
+        extract: false,
+        destinationKeyPrefix: "libs",
+      },
+    );
+
+    // const uploadedReportPublishLibObject = new BucketDeployment(
+    //   this,
+    //   `${id}-DataPullLib`,
+    //   {
+    //     sources: [Source.asset(`libs/adapt-report-publish-lib.zip`)],
+    //     destinationBucket: assetsBucket,
+    //     extract: false,
+    //     destinationKeyPrefix: "libs",
+    //   }
+    // );
 
     const adaptDataPullJob = new Job(this, `${id}-AdaptDataPullJob`, {
       jobName: `${id}-AdaptDataPullJob`,
@@ -199,11 +268,14 @@ export class AdaptDataStack extends cdk.Stack {
         script: Code.fromBucket(assetsBucket, `scripts/dataPull.py`),
       }),
       defaultArguments: {
-        "--extra-py-files": `s3://${assetsBucket.bucketName}/${id}-adapt-data-pull-lib.zip`,
+        "--extra-py-files": `s3://${assetsBucket.bucketName}/libs/${cdk.Fn.select(0, uploadedDataPullLibObject.objectKeys)}`,
         "--additional-python-modules": "sql-metadata,lxml,beautifulsoup4",
         "--data-pull-s3": repositoryBucket.bucketName,
         "--data-set-id": "default",
         "--table-name": props.dynamoTables["dataSourceTable"].tableName,
+        "--templates-table-name":
+          props.dynamoTables["templatesTable"].tableName,
+        "--settings-table-name": props.dynamoTables["settingsTable"].tableName,
         "--data-staging-s3": stagingBucket.bucketName, // change to stage bucket eventually
         "--data-pull-crawler":
           adaptDataPullCrawler.name || `${id}-adapt-data-catalog`,
@@ -222,22 +294,25 @@ export class AdaptDataStack extends cdk.Stack {
       executable: JobExecutable.pythonEtl({
         glueVersion: GlueVersion.V4_0,
         pythonVersion: PythonVersion.THREE,
-        script: Code.fromBucket(assetsBucket, `scripts/publishReport.py`),
+        script: Code.fromBucket(assetsBucket, `scripts/publish.py`),
       }),
       defaultArguments: {
-        "--extra-py-files": `s3://${assetsBucket.bucketName}/${id}-adapt-publish-report-lib.zip`,
-        "--additional-python-modules": "sql-metadata,dar-tool,pandas",
+        // "--extra-py-files": `s3://${assetsBucket.bucketName}/libs/${cdk.Fn.select(0,uploadedReportPublishLibObject.objectKeys)}`,
+        "--additional-python-modules":
+          "sql-metadata,numpy,dar-tool==1.0.6,pandas",
         "--data-pull-s3": repositoryBucket.bucketName,
         "--report-id": "default",
+        "--settings-table-name": props.dynamoTables["settingsTable"].tableName,
         "--glue-database": adaptDataCatalog.databaseName,
         "--table-name": props.dynamoTables["reportTable"].tableName,
-        "--report-data-s3": repositoryBucket.bucketName,
+        "--report-data-s3": reportDataBucket.bucketName,
         "--published-report-data-crawler": adaptReportCrawler.name!,
         "--user": "default",
       },
-      workerType: WorkerType.STANDARD,
+      workerType: WorkerType.G_1X,
       workerCount: 2,
     });
+    this.publishJob = adaptPublishReportJob;
 
     const dataPullJobStateChangeRule = new Rule(
       this,
@@ -251,7 +326,7 @@ export class AdaptDataStack extends cdk.Stack {
             state: ["SUCCEEDED", "FAILED", "STOPPED"],
           },
         },
-      }
+      },
     );
 
     const publishReportJobStateChangeRule = new Rule(
@@ -266,17 +341,30 @@ export class AdaptDataStack extends cdk.Stack {
             state: ["SUCCEEDED", "FAILED", "STOPPED"],
           },
         },
-      }
+      },
+    );
+
+    const dataSuppressionLambdaLayer = new LayerVersion(
+      this,
+      `${id}-adapt-suppression-service-layer`,
+      {
+        compatibleRuntimes: [Runtime.PYTHON_3_10],
+        code: new AssetCode(
+          path.join(__dirname, "layers", "suppress-layer", "lib.zip"),
+        ),
+        description: "suppression service dependencies",
+      },
     );
 
     const dataSuppressionServiceFunction = new AdaptPythonLambda(
       this,
       "DataSuppressionService",
       {
+        layers: [dataSuppressionLambdaLayer],
         prefix: props.stage,
-        codePath: "./handlers/dataSuppress/",
+        codePath: "./services/dataSuppress/",
         handler: "dataSuppress.handler",
-      }
+      },
     );
     this.suppressionServiceFunctionName =
       dataSuppressionServiceFunction.functionName;
@@ -290,25 +378,41 @@ export class AdaptDataStack extends cdk.Stack {
         entry: path.join(
           __dirname,
           ".",
-          "./handlers/dataPullJobStatus/dataPullJobStatus.ts"
+          "./handlers/dataPullJobStatus/dataPullJobStatus.ts",
         ),
         attachPolicies: [
           new Policy(this, "dataPullJobStatus", {
             statements: [
+              this.loggingStatement,
               new PolicyStatement({
                 actions: ["glue:GetJobRun"],
                 effect: Effect.ALLOW,
                 resources: ["*"],
               }),
               new PolicyStatement({
-                actions: ["dyanmodb:GetItem", "dynamodb:UpdateItem"],
+                actions: ["dynamodb:GetItem", "dynamodb:UpdateItem"],
                 effect: Effect.ALLOW,
                 resources: [props.dynamoTables["dataSourceTable"].tableArn],
               }),
               new PolicyStatement({
-                actions: ["dyanmodb:GetItem"],
+                actions: ["dynamodb:GetItem"],
                 effect: Effect.ALLOW,
-                resources: [props.dynamoTables["pushNotificationsTable"].tableArn],
+                resources: [
+                  props.dynamoTables["pushNotificationsTable"].tableArn,
+                ],
+              }),
+              new PolicyStatement({
+                actions: ["dynamodb:Query"],
+                effect: Effect.ALLOW,
+                resources: [props.dynamoTables["reportTable"].tableArn],
+              }),
+              new PolicyStatement({
+                effect: Effect.ALLOW,
+                actions: ["s3:*", "s3express:*"], // TODO: restrict
+                resources: [
+                  adminReportCache.attrArn,
+                  `${adminReportCache.attrArn}/*`,
+                ],
               }),
             ],
           }),
@@ -320,12 +424,82 @@ export class AdaptDataStack extends cdk.Stack {
           LOG_GROUP: props.logGroup.logGroupName,
           PUBLIC_VAPID_KEY: props.vapidKeys.publicKey,
           PRIVATE_VAPID_KEY: props.vapidKeys.privateKey,
+          REPORT_TABLE: props.dynamoTables["reportTable"].tableName,
+          REPORT_CACHE_BUCKET: this.adminReportCache.bucketName!,
         },
         nodeModules: ["web-push"],
-      }
+      },
     );
     dataPullJobStateChangeRule.addTarget(
-      new LambdaFunction(dataPullJobStatusHandler)
+      new LambdaFunction(dataPullJobStatusHandler),
+    );
+
+    this.renderTemplateServiceFunction = new AdaptNodeLambda(
+      this,
+      "renderTemplateService",
+      {
+        memorySize: 2048,
+        timeout: cdk.Duration.seconds(60),
+        prefix: props.stage,
+        handler: "handler",
+        entry: path.join(
+          __dirname,
+          ".",
+          "./services/renderTemplate/renderTemplate.ts",
+        ),
+        attachPolicies: [
+          new Policy(this, "renderTemplateServicePolicy", {
+            statements: [
+              this.loggingStatement,
+              new PolicyStatement({
+                actions: ["glue:*"],
+                effect: Effect.ALLOW,
+                resources: ["*"],
+              }),
+              new PolicyStatement({
+                actions: ["lambda:InvokeFunction"],
+                effect: Effect.ALLOW,
+                resources: [dataSuppressionServiceFunction.functionArn],
+              }),
+              new PolicyStatement({
+                actions: [
+                  "dynamodb:GetItem",
+                  "dynamodb:UpdateItem",
+                  "dynamodb:Query",
+                ],
+                effect: Effect.ALLOW,
+                resources: [
+                  props.dynamoTables["dataSourceTable"].tableArn,
+                  props.dynamoTables["reportTable"].tableArn,
+                  props.dynamoTables["settingsTable"].tableArn,
+                  `${props.dynamoTables["reportTable"].tableArn}/index/report-slug-query`,
+                ],
+              }),
+              new PolicyStatement({
+                actions: ["s3:*"],
+                effect: Effect.ALLOW,
+                resources: ["*"],
+              }),
+              new PolicyStatement({
+                effect: Effect.ALLOW,
+                actions: ["athena:*"], // TODO: limit actions
+                resources: ["*"], // TODO: restrict to the data catalog
+              }),
+            ],
+          }),
+        ],
+        environment: {
+          REPORT_TABLE: props.dynamoTables["reportTable"].tableName,
+          DATA_TABLE: props.dynamoTables["dataSourceTable"].tableName,
+          SETTINGS_TABLE: props.dynamoTables["settingsTable"].tableName,
+          CATALOG: this.dataCatalog.databaseName,
+          BUCKET: this.queryResultBucket.bucketName,
+          SUPPRESSION_SERVICE_FUNCTION: this.suppressionServiceFunctionName,
+          VIEWER_REPORT_CACHE: viewerReportCache.bucketName!,
+          ATHENA_QUERY_RATE: "1000",
+        },
+        nodeModules: ["web-push"],
+      },
     );
 
     const reportPublishJobStatusHandler = new AdaptNodeLambda(
@@ -334,45 +508,82 @@ export class AdaptDataStack extends cdk.Stack {
       {
         prefix: props.stage,
         handler: "handler",
+        timeout: cdk.Duration.seconds(60),
         entry: path.join(
           __dirname,
           ".",
-          "./handlers/reportPublishJobStatus/reportPublishJobStatus.ts"
+          "./handlers/reportPublishJobStatus/reportPublishJobStatus.ts",
         ),
         attachPolicies: [
           new Policy(this, "reportPublishJobStatus", {
             statements: [
+              this.loggingStatement,
               new PolicyStatement({
                 actions: ["glue:GetJobRun"],
                 effect: Effect.ALLOW,
                 resources: ["*"],
               }),
               new PolicyStatement({
-                actions: ["dyanmodb:GetItem", "dynamodb:UpdateItem"],
                 effect: Effect.ALLOW,
-                resources: [props.dynamoTables["dataSourceTable"].tableArn],
+                actions: ["translate:TranslateText"],
+                resources: ["*"],
               }),
               new PolicyStatement({
-                actions: ["dyanmodb:GetItem"],
+                actions: [
+                  "dynamodb:GetItem",
+                  "dynamodb:UpdateItem",
+                  "dynamodb:PutItem",
+                ],
                 effect: Effect.ALLOW,
-                resources: [props.dynamoTables["pushNotificationsTable"].tableArn],
+                resources: [props.dynamoTables["reportTable"].tableArn],
+              }),
+              new PolicyStatement({
+                actions: ["dynamodb:Query"],
+                effect: Effect.ALLOW,
+                resources: [props.dynamoTables["templatesTable"].tableArn],
+              }),
+              new PolicyStatement({
+                actions: ["dynamodb:GetItem"],
+                effect: Effect.ALLOW,
+                resources: [
+                  props.dynamoTables["pushNotificationsTable"].tableArn,
+                  props.dynamoTables["settingsTable"].tableArn,
+                ],
+              }),
+              new PolicyStatement({
+                effect: Effect.ALLOW,
+                actions: ["lambda:InvokeFunction"], // TODO: limit actions
+                resources: [this.renderTemplateServiceFunction.functionArn],
+              }),
+              new PolicyStatement({
+                effect: Effect.ALLOW,
+                actions: ["s3:*", "s3express:*"], // TODO: restrict
+                resources: [
+                  viewerReportCache.attrArn,
+                  `${viewerReportCache.attrArn}/*`,
+                ],
               }),
             ],
           }),
         ],
         environment: {
-          TABLE_NAME: props.dynamoTables["dataSourceTable"].tableName,
+          TABLE_NAME: props.dynamoTables["reportTable"].tableName,
           NOTIFICATION_TABLE_NAME:
             props.dynamoTables["pushNotificationsTable"].tableName,
           LOG_GROUP: props.logGroup.logGroupName,
           PUBLIC_VAPID_KEY: props.vapidKeys.publicKey,
+          RENDER_TEMPLATE_FUNCTION:
+            this.renderTemplateServiceFunction.functionName,
           PRIVATE_VAPID_KEY: props.vapidKeys.privateKey,
+          SETTINGS_TABLE_NAME: props.dynamoTables["settingsTable"].tableName,
+          TEMPLATE_TABLE: props.dynamoTables["templatesTable"].tableName,
+          VIEWER_REPORT_CACHE: viewerReportCache.bucketName!,
         },
         nodeModules: ["web-push"],
-      }
+      },
     );
     publishReportJobStateChangeRule.addTarget(
-      new LambdaFunction(reportPublishJobStatusHandler)
+      new LambdaFunction(reportPublishJobStatusHandler),
     );
   }
 }

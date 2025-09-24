@@ -1,4 +1,4 @@
 export enum Provider {
-  AWS = 'AWS',
-  AZURE = 'AZURE',
+  AWS = "AWS",
+  AZURE = "AZURE",
 }

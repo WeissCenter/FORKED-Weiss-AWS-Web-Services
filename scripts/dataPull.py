@@ -1,10 +1,12 @@
+from functools import partial
 import sys
 import uuid
 import json
 import re
 import boto3
 import traceback
-import pyspark.pandas as ps
+from data.transformers.edfactsCSVTransformer import edFactsCSVTransformer
+from data.transformers.FS175Transformer import fS175Transformer
 import pandas as pd
 from awsglue.transforms import *
 from awsglue.utils import getResolvedOptions
@@ -14,14 +16,15 @@ from awsglue.job import Job
 from awsglue.dynamicframe import DynamicFrame
 from boto3.dynamodb.types import TypeDeserializer
 from sql_metadata import Parser
-from lib.FileTransformer import fileTransformerFactory
-from lib.transformers.FS002Transformer import fS002Transformer
-from lib.transformers.FS089Transformer import fS089Transformer
-from lib.transformers.PartCChildCountAndSettingsTransformer import partCChildCountAndSettingsTransformer
+from data.FileTransformer import fileTransformerFactory
+from data.transformers.FS002Transformer import fS002Transformer
+from data.transformers.FS089Transformer import fS089Transformer
+from data.transformers.FS007Transformer import fs007Transformer
+from data.transformers.PartCChildCountAndSettingsTransformer import partCChildCountAndSettingsTransformer
 
-args = getResolvedOptions(sys.argv, ["JOB_NAME", "data-view-id", "table-name", "data-pull-s3", "data-staging-s3", "data-pull-crawler", "user"])
+args = getResolvedOptions(sys.argv, ["JOB_NAME", "data-view-id", "table-name", "data-pull-s3", "templates-table-name", "data-staging-s3", "data-pull-crawler", "user"])
 sc = SparkContext()
-sc.setLogLevel('DEBUG')
+sc.setLogLevel('ERROR')
 glueContext = GlueContext(sc)
 spark = glueContext.spark_session
 job = Job(glueContext)
@@ -31,10 +34,26 @@ s3_client = boto3.client('s3')
 logger = glueContext.get_logger()
 
 
+# test config for 175 will eventually just slam it in the templates for data collections
+
+
+fs_list = ["FS175", "FS178", "FS185", "FS188", "FS009", "FS901", "FS005", "FS006", "FS007", "FS088", "FS143", "FS144", "FS070", "FS099", "FS112"]
+
+
+common_opts = {"quoteChar": '\'', "withHeader": False, "separator": ","}
+
 file_transformer_factory = fileTransformerFactory(glueContext, spark)
 
-file_transformer_factory.register("FS002", fS002Transformer, {"quoteChar": '\'', "withHeader": False, "separator": ","})
-file_transformer_factory.register("FS089", fS089Transformer, {"quoteChar": '\'', "withHeader": False, "separator": ","})
+file_transformer_factory.register("FS002", fS002Transformer, common_opts)
+file_transformer_factory.register("FS089", fS089Transformer, common_opts)
+file_transformer_factory.register("FS007", fs007Transformer, common_opts)
+ 
+
+
+for fs_code in fs_list:
+    file_transformer_factory.register(fs_code, edFactsCSVTransformer, common_opts)
+
+
 file_transformer_factory.register("partCHTML", partCChildCountAndSettingsTransformer, {"quoteChar": '\'', "withHeader": False, "separator": ","})
 deserializer = TypeDeserializer()
 
@@ -60,10 +79,6 @@ def sparkSqlQuery(spark, glueContext, query, mapping) -> DynamicFrame:
     result = spark.sql(query)
     return DynamicFrame.fromDF(result, glueContext, str(uuid.uuid4()))
 
-
-
-
-
 def getItemFromDDB(TableName, ItemType, ID):
     dynamoResponse = dbClient.get_item(TableName=TableName, Key={"type": {"S": ItemType}, "id": {"S": f"ID#{ID}"}})
 
@@ -71,7 +86,6 @@ def getItemFromDDB(TableName, ItemType, ID):
         raise f"item {id} of type {ItemType} does not exist"
         
     return {k: deserializer.deserialize(v) for k, v in dynamoResponse["Item"].items()} 
-
 
 def clearS3(bucket, prefix):
     s3 = boto3.resource('s3')
@@ -84,15 +98,16 @@ def handleFileDataSource(nodes, dynamo_data_source, s3, format):
     fileSpec = dynamo_data_source["fileSpec"]
 
     format_options = {}
-
-    match(format):
-        case 'csv':
-            format_options = {"quoteChar": '\'', "withHeader": True, "separator": ","}
+    
+    
+    if format == 'csv':
+        format_options = {"quoteChar": '\'', "withHeader": True, "separator": ","}
 
     try:
         format_options = file_transformer_factory.get_format_options(fileSpec)
     except:
         pass
+
 
     new_node = glueContext.create_dynamic_frame.from_options(
         format_options=format_options,
@@ -226,9 +241,19 @@ def handleDBDataCollection(nodes, dbClient, table_name, dynamo_data_view):
 
 def handleFileDataCollection(nodes, dynamo_data_view, data_staging_s3):
     format_options = {"quoteChar": '\'', "withHeader": True, "separator": ","}
+    
+        
+    # get the data collection if it exists.
+    
+    template_dynamo_response = dbClient.get_item(TableName=templates_table_name, Key={"type": {"S": "DataCollection"}, "id": {"S": f"ID#{dynamo_data_view['data']['id']}"}})
+
+
+    dynamo_template = {k: deserializer.deserialize(v) for k, v in template_dynamo_response["Item"].items()} 
+        
+
 
     # get data collection template
-    for file in dynamo_data_view['data']['files']:
+    for idx, file in enumerate(dynamo_data_view['data']['files']):
         
         fileSpec = file['id']
 
@@ -246,23 +271,23 @@ def handleFileDataCollection(nodes, dynamo_data_view, data_staging_s3):
 
         if data_parse is not None:
             from_what = data_parse.get('from')
+            
+            if from_what == 'html':
 
-            match from_what:
-                case 'html':
-                    response = s3_client.get_object(Bucket=data_staging_s3, Key=f"{dynamo_data_view['dataViewID']}/{fileSpec}/{file['location']}")
-                    html_content = response['Body'].read().decode('utf-8')
+                response = s3_client.get_object(Bucket=data_staging_s3, Key=f"{dynamo_data_view['dataViewID']}/{fileSpec}/{file['location']}")
+                html_content = response['Body'].read().decode('utf-8')
 
-                    html_dfs = pd.read_html(html_content)
+                html_dfs = pd.read_html(html_content)
 
-                    # empty_df = spark.createDataFrame([])
-                    # new_node = DynamicFrame.fromDF(empty_df, glueContext, str(uuid.uuid4()))
+                # empty_df = spark.createDataFrame([])
+                # new_node = DynamicFrame.fromDF(empty_df, glueContext, str(uuid.uuid4()))
 
-                    kwargs.append(html_dfs)
-                    kwargs.append(data_parse)
-                    kwargs.append(html_content)
+                kwargs.append(html_dfs)
+                kwargs.append(data_parse)
+                kwargs.append(html_content)
 
 
-                case 'csv':
+            elif from_what == 'csv':
                     new_node = glueContext.create_dynamic_frame.from_options(
                     format_options=format_options,
                     connection_type="s3",
@@ -273,7 +298,7 @@ def handleFileDataCollection(nodes, dynamo_data_view, data_staging_s3):
                         ]
                     },
                 )
-                case _:
+            else:
                     raise ValueError("unknown from type")
         else:
             new_node = glueContext.create_dynamic_frame.from_options(
@@ -286,28 +311,31 @@ def handleFileDataCollection(nodes, dynamo_data_view, data_staging_s3):
                         ]
                     }
             )
+            
+        print(  f"s3://{data_staging_s3}/{dynamo_data_view['dataViewID']}/{fileSpec}/{file['location']}")
    
-        transformer = file_transformer_factory.get_transformer(fileSpec)
-
+        transformer = file_transformer_factory.get_transformer(fileSpec, config=dynamo_template['files'][idx])
+        
         df = transformer.transform((new_node or None) and new_node.toDF(), *kwargs)
 
         new_node = DynamicFrame.fromDF(df, glueContext, str(uuid.uuid4()))
-        print("NEW NODE")
 
 
         nodes.append(new_node)
 
 def handleDataView(dbClient, table_name, dynamo_data_view, data_staging_s3):
     nodes = []
+    
+    view_type = dynamo_data_view.get('dataViewType')
+    
+    if view_type == 'collection':
+        handleFileDataCollection(nodes, dynamo_data_view, data_staging_s3)
+    elif view_type == 'database':
+        handleDBDataCollection(nodes, dbClient, table_name, dynamo_data_view)
 
-    match dynamo_data_view.get('dataViewType'):
-        case 'collection':
-            handleFileDataCollection(nodes, dynamo_data_view, data_staging_s3)
-        case 'database':
-            handleDBDataCollection(nodes, dbClient, table_name, dynamo_data_view)
+            
     
     return nodes;
-
 
 def handleDataSources(dbClient, table_name, dynamo_data_set, data_staging_s3):
     nodes = []
@@ -365,6 +393,7 @@ try:
     data_pull_s3 = args["data_pull_s3"]
     data_staging_s3 = args["data_staging_s3"]
     data_pull_crawler = args["data_pull_crawler"]
+    templates_table_name = args["templates_table_name"]
     
     dynamoResponse = dbClient.get_item(TableName=table_name, Key={"type": {"S": "DataView"}, "id": {"S": f"ID#{data_view}"}})
 
@@ -375,6 +404,7 @@ try:
         raise f"Data View {data_view} does not exist"
         
     dynamo_data_view = {k: deserializer.deserialize(v) for k, v in dynamoResponse["Item"].items()} 
+
     
     nodes = handleDataView(dbClient, table_name, dynamo_data_view, data_staging_s3)
 
@@ -389,10 +419,6 @@ try:
     clearS3(data_pull_s3, data_view)
 
     for index, file in enumerate(dynamo_data_view['data']['files']):
-
-        print("SAVING FILE", file['id'])
-
-
     
         result = glueContext.write_dynamic_frame.from_options(
             frame=nodes[index],
@@ -405,7 +431,7 @@ try:
             format_options={"compression": "snappy"},
         )
 
-
+# .otherwise(col("CategorySetCode"))
 
     glue_client = boto3.client('glue')
     glue_client.start_crawler(Name=data_pull_crawler)
@@ -413,6 +439,6 @@ try:
 
     job.commit()
 except Exception as e:
-    logger.error(f"TRACEBACK: {traceback.format_exc()}")
+    #logger.error(f"TRACEBACK: {traceback.format_exc()}")
     raise Exception(json.dumps({"user": args["user"], "err": f"{e}"}))
     

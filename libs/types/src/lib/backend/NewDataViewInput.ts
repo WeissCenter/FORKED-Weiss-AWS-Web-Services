@@ -1,13 +1,13 @@
-import { DataParseDefinition } from '../IDataCollectionTemplate';
-import { SQLJoinType } from '../SQLJoinType';
-import { DataSetDataSource, DataSetDataSourceRelationship } from './DataSet';
+import { DataParseDefinition } from "../IDataCollectionTemplate";
+import { SQLJoinType } from "../SQLJoinType";
+import { DataSetDataSource, DataSetDataSourceRelationship } from "./DataSet";
 
 export interface NewDataViewInput {
   dataViewID?: string;
   name: string;
   description: string;
-  type?: 'collection' | 'file' | 'database';
-  dataViewType?: 'collection' | 'file' | 'database';
+  type?: "collection" | "file" | "database";
+  dataViewType?: "collection" | "file" | "database";
   data: DBDataViewDataCollection;
 }
 
@@ -26,6 +26,7 @@ export interface DBDataViewDataCollection {
 
 export interface DataViewField {
   id: string;
+  label: string;
   value: any;
 }
 

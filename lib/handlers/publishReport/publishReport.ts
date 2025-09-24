@@ -26,23 +26,23 @@ const client = new GlueClient({ region: "us-east-1" });
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   const logStream = aws_generateDailyLogStreamID();
   const username = getUserDataFromEvent(event).username;
 
   try {
-    const id = event.pathParameters ? event.pathParameters["reportID"] : null;
+    const id = event.pathParameters ? event.pathParameters["reportId"] : null;
     if (!id) {
-      throw new Error("reportID is missing in path parameters");
+      throw new Error("reportId is missing in path parameters");
     }
 
     const getParams = {
       TableName: REPORT_TABLE,
       Key: {
         type: "Report",
-        id: `ID#${id}#Version#draft`,
+        id: `ID#${id}#Version#draft#Lang#en`,
       },
     };
 
@@ -63,7 +63,7 @@ export const handler: Handler = async (
       logStream,
       username,
       EventType.CREATE,
-      `Report publish for report ${report.reportID} started`
+      `Report publish for report ${report.reportID} started`,
     );
 
     return CreateBackendResponse(200, "report publish process started");

@@ -19,7 +19,7 @@ const db = DynamoDBDocument.from(client);
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   try {
@@ -29,7 +29,7 @@ export const handler: Handler = async (
     return CreateBackendResponse(200, dataSources);
   } catch (err) {
     return CreateBackendErrorResponse(500, "Failed to retrieve data sources");
-  } 
+  }
 };
 
 function cleanFields(dataSource: DataSource) {

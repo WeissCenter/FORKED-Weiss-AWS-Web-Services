@@ -1,6 +1,9 @@
-import { DataCollectionFieldDefinition, DataCollectionFileDefinition } from '../IDataCollectionTemplate';
-import { SQLJoinType } from '../SQLJoinType';
-import { DataSourceStatus } from './DataSourceStatus';
+import {
+  DataCollectionFieldDefinition,
+  DataCollectionFileDefinition,
+} from "../IDataCollectionTemplate";
+import { SQLJoinType } from "../SQLJoinType";
+import { DataSourceStatus } from "./DataSourceStatus";
 
 export interface DataSet {
   type?: string;

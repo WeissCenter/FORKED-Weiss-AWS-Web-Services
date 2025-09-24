@@ -44,7 +44,7 @@ const glue = new GlueClient({ region: "us-east-1" });
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   const logStream = aws_generateDailyLogStreamID();
@@ -160,7 +160,7 @@ export const handler: Handler = async (
       logStream,
       username,
       EventType.CREATE,
-      `DataSource: ${dataSourceID} of type ${DataSourceType.SQL} was successfully created`
+      `DataSource: ${dataSourceID} of type ${DataSourceType.SQL} was successfully created`,
     );
 
     return CreateBackendResponse(200, newDBItem);

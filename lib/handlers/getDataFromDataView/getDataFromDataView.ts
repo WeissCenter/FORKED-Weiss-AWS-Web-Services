@@ -8,40 +8,62 @@ import {
   GetDataFromDataViewInput,
   GetDataFromDataViewOutput,
   getDataView,
+  getAggregateAthenaResults,
+  AdaptSettings,
 } from "../../../libs/types/src";
-import { AthenaClient, Datum, ResultSet, StartQueryExecutionCommand, GetQueryExecutionCommand, QueryExecutionState } from "@aws-sdk/client-athena";
-import { GetQueryResultsCommand } from "@aws-sdk/client-cloudwatch-logs";
+import {
+  AthenaClient,
+  Datum,
+  ResultSet,
+  GetQueryResultsCommand,
+  StartQueryExecutionCommand,
+  GetQueryExecutionCommand,
+  QueryExecutionState,
+} from "@aws-sdk/client-athena";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { LambdaClient, InvokeCommand, LogType } from "@aws-sdk/client-lambda";
 import { DynamoDBDocument } from "@aws-sdk/lib-dynamodb";
-import { Kysely, SqliteAdapter, DummyDriver, SqliteIntrospector, SqliteQueryCompiler, SelectQueryBuilder, sql, ColumnDataType, AliasableExpression } from "kysely";
+import {
+  Kysely,
+  SqliteAdapter,
+  DummyDriver,
+  SqliteIntrospector,
+  SqliteQueryCompiler,
+  SelectQueryBuilder,
+  sql,
+  ColumnDataType,
+  AliasableExpression,
+} from "kysely";
+import * as log4js from "log4js";
 
 // Define Environment Variables
 const TABLE_NAME = process.env.TABLE_NAME || "";
 const CATALOG = process.env.CATALOG || "";
 const BUCKET = process.env.BUCKET || "";
-const SUPPRESSION_SERVICE_FUNCTION = process.env.SUPPRESSION_SERVICE_FUNCTION || "";
-const ATHENA_QUERY_RATE = parseInt(process.env.ATHENA_QUERY_RATE || "1000"); // TODO: determine a good default
-
-// AWS SDK Clients
-const client = new DynamoDBClient({ region: "us-east-1" });
-const db = DynamoDBDocument.from(client);
-const lambdaClient = new LambdaClient({ region: "us-east-1" });
-const athenaClient = new AthenaClient({ region: "us-east-1" });
-
-const queryBuilder = new Kysely<any>({
-  dialect: {
-    createAdapter: () => new SqliteAdapter(),
-    createDriver: () => new DummyDriver(),
-    createIntrospector: (db) => new SqliteIntrospector(db),
-    createQueryCompiler: () => new SqliteQueryCompiler(),
-  },
-});
+const SUPPRESSION_SERVICE_FUNCTION =
+  process.env.SUPPRESSION_SERVICE_FUNCTION || "";
+const ATHENA_QUERY_RATE = parseInt(process.env.ATHENA_QUERY_RATE || "1000");
+const SETTINGS_TABLE = process.env.SETTINGS_TABLE || "";
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
+  // AWS SDK Clients
+  const client = new DynamoDBClient({ region: "us-east-1" });
+  const db = DynamoDBDocument.from(client);
+  const lambdaClient = new LambdaClient({ region: "us-east-1" });
+  const athenaClient = new AthenaClient({ region: "us-east-1" });
+
+  const queryBuilder = new Kysely<any>({
+    dialect: {
+      createAdapter: () => new SqliteAdapter(),
+      createDriver: () => new DummyDriver(),
+      createIntrospector: (db) => new SqliteIntrospector(db),
+      createQueryCompiler: () => new SqliteQueryCompiler(),
+    },
+  });
+
   console.log(event);
   try {
     if (!event?.body) {
@@ -52,7 +74,7 @@ export const handler: Handler = async (
     if (!dataViewID) {
       return CreateBackendErrorResponse(
         400,
-        "Missing dataViewID in path parameters"
+        "Missing dataViewID in path parameters",
       );
     }
 
@@ -68,207 +90,41 @@ export const handler: Handler = async (
     if (!dataSet.lastPull) {
       return CreateBackendErrorResponse(
         400,
-        "A Pull has not been run for this data set"
+        "A Pull has not been run for this data set",
       );
     }
 
     const { operations, suppression, fileSpec } = JSON.parse(
-      event.body
+      event.body,
     ) as GetDataFromDataViewInput;
 
     const dataViewCode = `${dataSet.dataViewID.replace(/[-]/g, "_")}`;
 
-    const aggregateResults = await Promise.all(
-      operations.map(async (operation) => {
-        try {
-          switch (operation.function) {
-            case "SUM": {
-              const [sumField, ...conditions] = operation.arguments;
-
-              let query = queryBuilder
-                .selectFrom(dataViewCode)
-                .select(({ fn, val, ref }: any) => [
-                  fn.sum(cast(sumField.field, "integer")).as("sum"),
-                ]);
-
-              if (conditions.length) {
-                query = createConditions(query, conditions);
-              }
-
-              const compiled = query.compile();
-
-              console.log("SUM COMPILED", compiled);
-
-              const resultSet = await queryAthena(
-                compiled,
-                athenaClient,
-                ATHENA_QUERY_RATE
-              );
-
-              console.log("SUM RESULTSET", resultSet);
-
-              const [column, sum] = resultSet.Rows;
-
-              const sumInt = parseInt(sum["Data"][0]["VarCharValue"]);
-
-              return { id: operation.id, value: sumInt };
-              break;
-            }
-            case "SELECT": {
-              const [selectFields, limit, order, ...conditions] =
-                operation.arguments;
-
-              let query = queryBuilder.selectFrom(dataViewCode);
-
-              if (selectFields.value[0] === "*") {
-                query = query.selectAll();
-              } else {
-                query = handleSelect(query, selectFields);
-              }
-
-              if (order.value?.length) {
-                query = query.orderBy(order.value);
-              }
-
-              if (conditions.length) {
-                query = createConditions(query, conditions);
-              }
-
-              if (limit.value) {
-                query = query.limit(limit.value);
-              }
-
-              const compiled = query.compile();
-
-              console.log("SELECT COMPILED", compiled);
-
-              const resultSet = await queryAthena(
-                compiled,
-                athenaClient,
-                ATHENA_QUERY_RATE
-              );
-
-              console.log("SELECT RESULTSET", resultSet);
-
-              return {
-                id: operation.id,
-                value: mapAthenaQueryResults(resultSet),
-              };
-              break;
-            }
-            case "COUNT": {
-              const [countField, ...conditions] = operation.arguments;
-
-              let query = queryBuilder
-                .selectFrom(dataViewCode)
-                .select(({ fn, val, ref }: any) => [
-                  countField.field === "*"
-                    ? fn.countAll().as("count")
-                    : fn.count(countField.field).as("count"),
-                ]);
-
-              if (conditions.length) {
-                query = createConditions(query, conditions);
-              }
-
-              const compiled = query.compile();
-
-              const resultSet = await queryAthena(
-                compiled,
-                athenaClient,
-                ATHENA_QUERY_RATE
-              );
-
-              const [column, count] = resultSet.Rows;
-
-              const countInt = parseInt(count["Data"][0]["VarCharValue"]);
-
-              console.log("COUNT RESULTSET", resultSet);
-
-              return { id: operation.id, value: countInt };
-
-              break;
-            }
-            case "GROUPBY": {
-              const [
-                aggfunc,
-                fields,
-                selectFields,
-                limit,
-                order,
-                groupby,
-                ...conditions
-              ] = operation.arguments;
-
-              const func = aggfunc.value;
-
-              if (!["sum", "avg", "max", "min"].includes(func)) {
-                throw Error("unknown aggregation function");
-              }
-
-              let query = queryBuilder
-                .selectFrom(dataViewCode)
-                .select(({ fn }: any) =>
-                  fields.value.map((field) =>
-                    fn[func](cast(field, "integer")).as(field)
-                  )
-                )
-
-                .groupBy(groupby.value);
-
-              if (selectFields.value) {
-                query = handleSelect(query, selectFields);
-              }
-
-              if (conditions.length) {
-                query = createConditions(query, conditions, groupby.value);
-              }
-
-              if (order.value) {
-                query = query.orderBy(order.value);
-              }
-
-              if (limit.value) {
-                query = query.limit(limit.value);
-              }
-
-              const compiled = query.compile();
-
-              console.log("GROUPBY COMPILED", compiled);
-
-              const resultSet = await queryAthena(
-                compiled,
-                athenaClient,
-                ATHENA_QUERY_RATE
-              );
-
-              console.log("GROUPBY RESULTSET", resultSet);
-
-              const mapped = mapAthenaQueryResults(resultSet);
-
-              return { id: operation.id, value: mapped };
-            }
-          }
-        } catch (err) {
-          console.error("OPERATION FAILED", operation);
-          throw err;
-        }
-      })
+    const aggregateResults = await getAggregateAthenaResults(
+      operations,
+      queryBuilder,
+      dataViewCode,
+      athenaClient,
+      ATHENA_QUERY_RATE,
+      CATALOG,
+      BUCKET,
     );
 
-    if (previewSuppression && suppression.required) {
+    if (previewSuppression && suppression?.required) {
+      const settings = await getSettings(db, SETTINGS_TABLE);
+
       const command = new InvokeCommand({
         FunctionName: SUPPRESSION_SERVICE_FUNCTION,
         Payload: JSON.stringify({
           data: aggregateResults,
-          frequencyColumns: suppression.frequencyColumns,
-          sensitiveColumns: suppression.sensitiveColumns,
+          threshold: settings.nSize || 30,
+          ...suppression,
         }),
         LogType: LogType.Tail,
       });
 
       const { Payload } = await lambdaClient.send(command);
-      const result = Buffer.from(Payload).toString();
+      const result = Buffer.from(Payload!).toString();
 
       const output: GetDataFromDataViewOutput = {
         operationResults: JSON.parse(result),
@@ -278,7 +134,7 @@ export const handler: Handler = async (
     }
 
     const output: GetDataFromDataViewOutput = {
-      operationResults: aggregateResults,
+      operationResults: aggregateResults as any,
     };
 
     return CreateBackendResponse(200, output);
@@ -291,22 +147,22 @@ export const handler: Handler = async (
 function createConditions(
   query,
   conditions: DataSetOperationArgument[],
-  groupBy?: string
+  groupBy?: string,
 ) {
   query = query.where(({ eb, or, and, not, exists, selectFrom }: any) => {
     const conds = conditions.map((field) => {
       if (field.array) {
         return or(
           field.value.map((val) =>
-            eb(field.field, field.operator === "NOT" ? "!=" : "=", `'${val}'`)
-          )
+            eb(field.field, field.operator === "NOT" ? "!=" : "=", `'${val}'`),
+          ),
         );
       }
 
       return eb(
         field.field,
         field.operator === "NOT" ? "!=" : "=",
-        `'${field.value}'`
+        `'${field.value}'`,
       );
     });
 
@@ -350,7 +206,7 @@ function mapAthenaQueryResults(resultSet: ResultSet) {
         Object.assign(accum, {
           [ColumnInfo[idx].Name]: mapDatum(val, ColumnInfo[idx].Type),
         }),
-      {}
+      {},
     );
 
     return subData;
@@ -360,9 +216,9 @@ function mapAthenaQueryResults(resultSet: ResultSet) {
 async function queryAthena(
   compiled,
   athenaClient: AthenaClient,
-  ATHENA_QUERY_RATE = 1000
+  ATHENA_QUERY_RATE = 1000,
 ) {
-  const athenaCommand = new StartQueryExecutionCommand({
+  const params = {
     QueryString: compiled.sql,
     ResultReuseConfiguration: {
       ResultReuseByAgeConfiguration: {
@@ -377,15 +233,31 @@ async function queryAthena(
       ? (compiled.parameters as any[])
       : null,
     ResultConfiguration: { OutputLocation: `s3://${BUCKET}/` },
-  });
+  };
+
+  console.log("athena params", params);
+  const athenaCommand = new StartQueryExecutionCommand(params);
+
+  console.log("athena command", athenaCommand);
 
   const startCommandResult = await athenaClient.send(athenaCommand);
+
+  console.log("startCommandResult", startCommandResult);
+
+  console.log(
+    "getQueryResultInputs",
+    athenaClient,
+    startCommandResult.QueryExecutionId,
+    ATHENA_QUERY_RATE,
+  );
 
   const resultSet = await getQueryResult(
     athenaClient,
     startCommandResult.QueryExecutionId,
-    ATHENA_QUERY_RATE
+    ATHENA_QUERY_RATE,
   );
+
+  console.log("result set", resultSet);
   return resultSet;
 }
 
@@ -437,19 +309,25 @@ function mapField(field: { field: string; type: string; value: any }) {
 async function getQueryResult(
   athena: AthenaClient,
   id: string,
-  ATHENA_QUERY_RATE = 1000
+  ATHENA_QUERY_RATE = 1000,
 ) {
   let status = "UNKNOWN";
   do {
+    console.log("sleeping");
     await sleep(ATHENA_QUERY_RATE);
 
     const statusCommand = new GetQueryExecutionCommand({
       QueryExecutionId: id,
     });
 
+    console.log("status command", statusCommand);
+
     const statusResult = await athena.send(statusCommand);
 
+    console.log("statusResult", statusResult);
+
     status = statusResult.QueryExecution.Status.State;
+    console.log("status", status);
   } while (
     status === QueryExecutionState.QUEUED ||
     status === QueryExecutionState.RUNNING
@@ -459,14 +337,18 @@ async function getQueryResult(
     QueryExecutionId: id,
   });
 
+  console.log("getQueryResultsCommand", getQueryResultsCommand);
+
   const response = await athena.send(getQueryResultsCommand);
+
+  console.log("response", response);
 
   return response.ResultSet;
 }
 
 function handleSelect<DB, TB extends keyof DB, O>(
   query: SelectQueryBuilder<DB, TB, O>,
-  field: DataSetOperationArgument
+  field: DataSetOperationArgument,
 ) {
   if (field.array) {
     const args = [];
@@ -494,7 +376,7 @@ function handleSelect<DB, TB extends keyof DB, O>(
 
 function cast(
   expr: string,
-  type: ColumnDataType
+  type: ColumnDataType,
 ): AliasableExpression<unknown> {
   return sql`cast("${sql.raw(expr)}" as ${sql.raw(type)})`;
 }
@@ -503,6 +385,17 @@ function sleep(ms: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+}
+
+function getSettings(db: DynamoDBDocument, settingsTable: string) {
+  const params = {
+    TableName: settingsTable,
+    Key: {
+      type: "Settings",
+      id: "ID#current",
+    },
+  };
+  return db.get(params).then((result) => result.Item as AdaptSettings);
 }
 
 // function createSelectFields(args: DataSetOperationArgument[]){

@@ -28,7 +28,7 @@ const glueClient = new GlueClient({ region: "us-east-1" });
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   const logStream = aws_generateDailyLogStreamID();
@@ -51,7 +51,7 @@ export const handler: Handler = async (
       db,
       TABLE_NAME,
       dataViewID,
-      DataSetQueueStatus.REQUESTED
+      DataSetQueueStatus.REQUESTED,
     );
 
     const startJobCommand = new StartJobRunCommand({
@@ -67,7 +67,7 @@ export const handler: Handler = async (
       logStream,
       username,
       EventType.CREATE,
-      `Data Pull for ${dataViewID} started`
+      `Data Pull for ${dataViewID} started`,
     );
 
     return CreateBackendResponse(200);
@@ -80,7 +80,7 @@ export const handler: Handler = async (
       logStream,
       username,
       EventType.CREATE,
-      `Failed to start data pull for ${dataViewID}: ${JSON.stringify(err)}`
+      `Failed to start data pull for ${dataViewID}: ${JSON.stringify(err)}`,
     );
 
     return CreateBackendErrorResponse(500, "failed to pull data");

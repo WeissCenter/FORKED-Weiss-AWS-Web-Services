@@ -10,10 +10,13 @@ import {
 } from "../../../libs/types/src";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
+import {
+  SecretsManagerClient,
+  GetSecretValueCommand,
+} from "@aws-sdk/client-secrets-manager";
 import { DynamoDBDocument } from "@aws-sdk/lib-dynamodb";
-import * as sql from 'mssql';
-import * as pd from 'nodejs-polars'
+import * as sql from "mssql";
+import * as pd from "nodejs-polars";
 
 // Define Environment Variables
 const TABLE_NAME = process.env.TABLE_NAME || "";
@@ -26,7 +29,7 @@ const secrets = new SecretsManagerClient({ region: "us-east-1" });
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   try {
@@ -35,21 +38,24 @@ export const handler: Handler = async (
     }
     const queryInput = JSON.parse(event.body) as QueryDataSourceInput;
 
-    const dataSourceID = event.pathParameters?.["dataSourceID"];
+    const dataSourceID = event.pathParameters?.["dataSourceId"];
     if (!dataSourceID) {
-      return CreateBackendErrorResponse(400, "Missing dataSourceID in path parameters");
+      return CreateBackendErrorResponse(
+        400,
+        "Missing dataSourceID in path parameters",
+      );
     }
 
     const dataSourceMetadata = await getDatasourceMetadata(
       db as any,
       TABLE_NAME,
-      dataSourceID
+      dataSourceID,
     );
 
     if (!dataSourceMetadata) {
       return CreateBackendErrorResponse(
         404,
-        `Data Source with ID ${dataSourceID} does not exist`
+        `Data Source with ID ${dataSourceID} does not exist`,
       );
     }
 
@@ -69,7 +75,7 @@ export const handler: Handler = async (
 
 async function handleFile(
   dataSourceMetadata: DataSource,
-  queryInput: QueryDataSourceInput
+  queryInput: QueryDataSourceInput,
 ) {
   const path = dataSourceMetadata.path;
 
@@ -99,7 +105,7 @@ async function handleFile(
 async function handleSQL(
   dataSourceMetadata: DataSource,
   secrets: SecretsManagerClient,
-  queryInput: QueryDataSourceInput
+  queryInput: QueryDataSourceInput,
 ) {
   if (!queryInput.query) {
     return CreateBackendErrorResponse(400, "missing query");
@@ -120,7 +126,7 @@ async function handleSQL(
   if (!response.SecretString) {
     return CreateBackendErrorResponse(
       500,
-      `Failed to retrieve connection info for ${dataSourceMetadata.dataSourceID}`
+      `Failed to retrieve connection info for ${dataSourceMetadata.dataSourceID}`,
     );
   }
 
@@ -132,7 +138,7 @@ async function handleSQL(
         decryptedConnectionInfo,
         url,
         queryInput.query,
-        queryInput.limit
+        queryInput.limit,
       );
     }
     case SQLType.MYSQL: {
@@ -150,7 +156,7 @@ async function handleMSSQL(
   decryptedConnectionInfo: any,
   url: string,
   query: string,
-  limit?: number
+  limit?: number,
 ) {
   const configParams = {
     user: decryptedConnectionInfo.username,

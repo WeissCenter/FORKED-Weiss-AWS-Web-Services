@@ -1,4 +1,4 @@
-import { ISuppression } from '../ITemplate';
+import { ISuppression } from "../ITemplate";
 
 export interface GetDataFromDataSetInput {
   operations: DataSetOperation[];
@@ -13,8 +13,8 @@ export interface DataSetOperation {
 
 export interface DataSetOperationArgument {
   field: string;
-  type?: 'string' | 'number';
+  type?: "string" | "number";
   array?: boolean;
-  operator?: 'OR' | 'AND' | 'NOT';
+  operator?: "OR" | "AND" | "NOT";
   value?: any;
 }

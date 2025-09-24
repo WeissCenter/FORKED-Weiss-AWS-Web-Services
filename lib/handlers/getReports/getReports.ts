@@ -18,7 +18,7 @@ const db = DynamoDBDocument.from(client);
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   try {
@@ -35,15 +35,18 @@ async function getReports() {
   const scanParams = {
     TableName: REPORT_TABLE,
     KeyConditionExpression: "#type = :type",
-    FilterExpression: "#version IN (:draft, :finalized)",
+    FilterExpression:
+      "#version IN (:draft, :finalized) AND #lang in (:default)",
     ExpressionAttributeValues: {
       ":type": "Report",
       ":draft": "draft",
       ":finalized": "finalized",
+      ":default": "en",
     },
     ExpressionAttributeNames: {
       "#type": "type",
       "#version": "version",
+      "#lang": "lang",
     },
   };
 
@@ -68,14 +71,15 @@ async function getReports() {
           accumulated.findIndex(
             (rpt) =>
               rpt.reportID === report.reportID &&
-              rpt.version === ReportVersion.FINALIZED
-          ) === -1)
+              rpt.version === ReportVersion.FINALIZED,
+          ) === -1),
     )
     .map((source) => cleanDBFields(source))
     .map((source) => {
       source.template = {
         id: source.template.id,
         description: source.template.description,
+        title: source.template.title,
       };
       return source;
     });

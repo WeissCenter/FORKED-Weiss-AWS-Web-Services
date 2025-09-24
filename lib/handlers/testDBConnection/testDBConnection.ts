@@ -4,7 +4,7 @@ import {
   CreateBackendErrorResponse,
   TestDBConnectionInput,
 } from "../../../libs/types/src";
-import * as sql from 'mssql';
+import * as sql from "mssql";
 
 // Define Environment Variables
 
@@ -12,7 +12,7 @@ import * as sql from 'mssql';
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   try {
@@ -37,25 +37,25 @@ export const handler: Handler = async (
         case "ELOGIN": {
           return CreateBackendErrorResponse(
             400,
-            "Connection Failed: Login Failed"
+            "Connection Failed: Login Failed",
           );
         }
         case "ETIMEOUT": {
           return CreateBackendErrorResponse(
             400,
-            "Connection Failed: Connection Timeout"
+            "Connection Failed: Connection Timeout",
           );
         }
         case "ESOCKET": {
           return CreateBackendErrorResponse(
             400,
-            "Connection Failed: Socket Error"
+            "Connection Failed: Socket Error",
           );
         }
         case "ECONNCLOSED": {
           return CreateBackendErrorResponse(
             400,
-            "Connection Failed: Connection was closed"
+            "Connection Failed: Connection was closed",
           );
         }
       }
@@ -63,7 +63,7 @@ export const handler: Handler = async (
 
     return CreateBackendErrorResponse(
       500,
-      "Failed to test connection to the database"
+      "Failed to test connection to the database",
     );
   }
 };

@@ -1,4 +1,4 @@
 export enum DataSourceType {
-  SQL = 'sql',
-  FILE = 'file',
+  SQL = "sql",
+  FILE = "file",
 }

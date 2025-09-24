@@ -13,7 +13,10 @@ import { CloudWatchLogsClient } from "@aws-sdk/client-cloudwatch-logs";
 import { DynamoDBClient, ReturnValue } from "@aws-sdk/client-dynamodb";
 import { GlueClient, UpdateConnectionCommand } from "@aws-sdk/client-glue";
 import { DynamoDBDocument } from "@aws-sdk/lib-dynamodb";
-import { SecretsManagerClient, UpdateSecretCommand } from "@aws-sdk/client-secrets-manager";
+import {
+  SecretsManagerClient,
+  UpdateSecretCommand,
+} from "@aws-sdk/client-secrets-manager";
 
 // Define Environment Variables
 const TABLE_NAME = process.env.TABLE_NAME || "";
@@ -29,12 +32,12 @@ const glue = new GlueClient({ region: "us-east-1" });
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   const logStream = aws_generateDailyLogStreamID();
   const dataSourceID = event.pathParameters
-    ? event.pathParameters["dataSourceID"]
+    ? event.pathParameters["dataSourceId"]
     : null;
   const username = getUserDataFromEvent(event).username;
   try {
@@ -107,7 +110,7 @@ export const handler: Handler = async (
       logStream,
       username,
       EventType.CREATE,
-      `DataSource: ${dataSourceID} was updated`
+      `DataSource: ${dataSourceID} was updated`,
     );
 
     return CreateBackendResponse(200, result.Attributes);

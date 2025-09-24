@@ -1,4 +1,4 @@
-import { DBDataViewDataCollection } from './backend/NewDataViewInput';
+import { DBDataViewDataCollection } from "./backend/NewDataViewInput";
 
 export interface DataView {
   dataViewID: string;
@@ -9,10 +9,10 @@ export interface DataView {
   updated?: number;
   status: string;
   description: string;
-  dataViewType: 'collection' | 'file' | 'database';
+  dataViewType: "collection" | "file" | "database";
   data: DBDataViewDataCollection;
-  lastPull: '';
-  pulledBy: '';
+  lastPull: "";
+  pulledBy: "";
 }
 
 export interface DBDataView {
@@ -25,9 +25,9 @@ export interface DBDataView {
   updated?: number;
   description: string;
   id: string;
-  dataViewType: 'collection' | 'file' | 'database';
+  dataViewType: "collection" | "file" | "database";
   type: string;
   data: DBDataViewDataCollection;
-  lastPull: '';
-  pulledBy: '';
+  lastPull: "";
+  pulledBy: "";
 }

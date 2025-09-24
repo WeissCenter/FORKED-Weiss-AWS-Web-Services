@@ -3,15 +3,15 @@ run-name: ${{ github.actor }} pushed an update.
 on:
   workflow_dispatch:
   push:
-    branches: ['main']
+    branches: ["main"]
 
 env:
   AWS_REGION: us-east-1
-  STAGE: 
+  STAGE:
   AWS_ACCOUNT_NO: xxxx
   HOSTED_ZONE:
   ADMIN_SUB_DOMAIN:
-  VIEWER_SUB_DOMAIN: 
+  VIEWER_SUB_DOMAIN:
 
 jobs:
   cdk-deploy:
@@ -48,9 +48,9 @@ jobs:
       - name: cdk deploy
         uses: youyo/aws-cdk-github-actions@v2
         with:
-          cdk_subcommand: 'deploy'
-          cdk_stack: '*'
-          cdk_args: '--require-approval never'
+          cdk_subcommand: "deploy"
+          cdk_stack: "*"
+          cdk_args: "--require-approval never"
           actions_comment: false
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_KEY_ID }}

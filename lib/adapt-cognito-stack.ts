@@ -32,7 +32,9 @@ export class AdaptCognitoStack extends cdk.Stack {
     //   }
     // );
 
-    const localCallbackUrl = props.includeLocalCallbackUrl ? ["http://localhost:4200/auth/redirect"] : [];
+    const localCallbackUrl = props.includeLocalCallbackUrl
+      ? ["http://localhost:4200/auth/redirect"]
+      : [];
 
     const userPoolClient = userPool.addClient("AdaptUserPoolClient", {
       userPoolClientName: `${props.stage}-AdaptUserPoolClient`,
@@ -40,15 +42,12 @@ export class AdaptCognitoStack extends cdk.Stack {
         userPassword: true,
       },
       oAuth: {
-        callbackUrls: [
-          ...localCallbackUrl,
-          ...props.callbackUrls,
-        ],
-      }
+        callbackUrls: [...localCallbackUrl, ...props.callbackUrls],
+      },
     });
     this.clientId = userPoolClient.userPoolClientId;
 
-    userPool.addDomain('CognitoDomain', {
+    userPool.addDomain("CognitoDomain", {
       cognitoDomain: {
         domainPrefix: props.domainPrefix.toLowerCase(),
       },

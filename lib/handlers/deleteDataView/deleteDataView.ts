@@ -31,7 +31,7 @@ const cloudwatch = new CloudWatchLogsClient({ region: "us-east-1" });
 
 export const handler: Handler = async (
   event: APIGatewayEvent,
-  context: Context
+  context: Context,
 ) => {
   console.log(event);
   const logStream = aws_generateDailyLogStreamID();
@@ -67,7 +67,7 @@ export const handler: Handler = async (
       logStream,
       username,
       EventType.DELETE,
-      `DataView: ${dataViewID} was deleted`
+      `DataView: ${dataViewID} was deleted`,
     );
 
     return CreateBackendResponse(200);
@@ -79,7 +79,7 @@ export const handler: Handler = async (
       logStream,
       username,
       EventType.DELETE,
-      `DataView: ${dataViewID} failed to delete: ${JSON.stringify(err)}`
+      `DataView: ${dataViewID} failed to delete: ${JSON.stringify(err)}`,
     );
 
     return CreateBackendErrorResponse(500, "failed to delete data source");
@@ -89,11 +89,11 @@ export const handler: Handler = async (
 async function deleteFolder(
   client: S3Client,
   key: string,
-  bucketName: string
+  bucketName: string,
 ): Promise<void> {
   const DeletePromises: Promise<DeleteObjectCommandOutput>[] = [];
   const { Contents } = await client.send(
-    new ListObjectsCommand({ Bucket: bucketName, Prefix: key })
+    new ListObjectsCommand({ Bucket: bucketName, Prefix: key }),
   );
 
   if (!Contents) return;
@@ -104,8 +104,8 @@ async function deleteFolder(
         new DeleteObjectCommand({
           Bucket: bucketName,
           Key: object.Key,
-        })
-      )
+        }),
+      ),
     );
   }
 

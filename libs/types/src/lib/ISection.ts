@@ -1,4 +1,4 @@
-import { SectionType } from './sections/SectionType';
+import { SectionType } from "./sections/SectionType";
 
 export interface ISection {
   type: SectionType; // defined list of available sections
@@ -8,7 +8,7 @@ export interface ISection {
 }
 
 export interface ISectionConditions {
-  operator: 'AND' | 'OR';
+  operator: "AND" | "OR";
   conditions: ISectionCondition[];
 }
 
