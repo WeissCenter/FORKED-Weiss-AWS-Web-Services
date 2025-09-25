@@ -8,7 +8,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  ENVIRONMENT:
+  ENVIRONMENT: weiss-sandbox
 
 jobs:
   dynamodb-seeding:
