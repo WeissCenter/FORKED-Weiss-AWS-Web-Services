@@ -15,7 +15,7 @@ const STAGE = process.env["STAGE"] || "dev"; // default to dev
 const DOMAIN_PREFIX = process.env["DOMAIN_PREFIX"] || `${STAGE}-AdaptAdmin`;
 const CALLBACK_URL =
   process.env["CALLBACK_URL"] ||
-  "https://dev-adaptadmin.adaptdata.org/auth/redirect"; // FIXME: variable
+  "/auth/redirect";
 const PUBLIC_VAPID_KEY = process.env["PUBLIC_VAPID_KEY"] || "";
 const PRIVATE_VAPID_KEY = process.env["PRIVATE_VAPID_KEY"] || "";
 const AWS_ACCOUNT = process.env["AWS_ACCOUNT"] || "";
