@@ -13,15 +13,15 @@ import { AdaptViewerSite } from "../lib/adapt-viewer-site-stack";
 
 const STAGE = process.env["STAGE"] || "dev"; // default to dev
 const DOMAIN_PREFIX = process.env["DOMAIN_PREFIX"] || `${STAGE}-AdaptAdmin`;
-const CALLBACK_URL =
-  process.env["CALLBACK_URL"] ||
-  "/auth/redirect";
 const PUBLIC_VAPID_KEY = process.env["PUBLIC_VAPID_KEY"] || "";
 const PRIVATE_VAPID_KEY = process.env["PRIVATE_VAPID_KEY"] || "";
 const AWS_ACCOUNT = process.env["AWS_ACCOUNT"] || "";
 const AWS_DEFAULT_REGION = process.env["AWS_DEFAULT_REGION"] || "us-east-1";
 const HOSTED_ZONE = process.env["HOSTED_ZONE"] || "";
 const VIEWER_SUB_DOMAIN = process.env["VIEWER_SUB_DOMAIN"] || `${STAGE}-viewer`;
+const CALLBACK_URL =
+  process.env["CALLBACK_URL"] ||
+  `https://${DOMAIN_PREFIX}.${HOSTED_ZONE}/auth/redirect`;
 
 const USER_POOL_ID =
   process.env["COGNITO_USER_POOL_ID"] || "us-east-1_SoghcU5UV"; // default to dev
