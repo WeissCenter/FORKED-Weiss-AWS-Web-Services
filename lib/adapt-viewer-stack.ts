@@ -190,7 +190,7 @@ export class AdaptViewerStack extends cdk.Stack {
             handler: new AdaptNodeLambda(this, "viewerGetDataForReportBySlug", {
               prefix: props.stage,
               handler: "handler",
-              timeout: cdk.Duration.seconds(29),
+              timeout: cdk.Duration.seconds(90),
               environment: {
                 TABLE_NAME: props.dynamoTables["reportTable"].tableName,
                 DATA_TABLE: props.dynamoTables["dataSourceTable"].tableName,
