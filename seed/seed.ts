@@ -15,13 +15,21 @@ type SourceLang = typeof SOURCE_LANGUAGE;
 
 const TARGET_LANGUAGES = (() => {
   // read the settings.json file to get the target languages
-  const settingsData = readFileSync("./seed/AdaptSettings/settings.json").toString();
+  const settingsData = readFileSync(
+    "./seed/AdaptSettings/settings.json",
+  ).toString();
   const settingsJSON = JSON.parse(settingsData);
-  return settingsJSON.supportedLanguages.filter((lang: string) => lang !== SOURCE_LANGUAGE);
+  return settingsJSON.supportedLanguages.filter(
+    (lang: string) => lang !== SOURCE_LANGUAGE,
+  );
 })();
 
+// The generic glossary file is under the /res folder, and the custom glossary files are under the /seed/AdaptSettings folder.
+// To replace any of the generic glossary for a given State for example Arkansas, the changes have to be made in the state-custom-glossary.json file.
+// In the internal private repo adapt-cdk the generic and custom glossary files are the same. The generic glossary file will always be a reference and
+// will never be used anywhere in the application other than for comparison with the custom glossary file.
 const TRANSLATE_CONFIG: Record<FilePath, FileTranslateConfig> = {
-  "seed/AdaptSettings/glossary.json": {
+  "seed/AdaptSettings/state-custom-glossary.json": {
     sourceLang: SOURCE_LANGUAGE,
     targetLangs: TARGET_LANGUAGES,
     ignoreKeys: ["type", "id"],
@@ -46,11 +54,10 @@ type FileTranslateConfig = {
   afterTranslate?: (
     translatedJSON: TranslatedJSON,
     sourceLang: string,
-    targetLang: string
+    targetLang: string,
   ) => TranslatedJSON;
 };
 type FilePath = string;
-
 
 function putIfNotExists(Item: any, TableName: string, force = false) {
   const params: PutCommandInput = {
@@ -66,12 +73,12 @@ function putIfNotExists(Item: any, TableName: string, force = false) {
     .catch((err) => {
       if (err instanceof ConditionalCheckFailedException) {
         console.log(
-          `Skipping ${Item.type} ${Item.id} in ${TableName} due to existing item`
+          `Skipping ${Item.type} ${Item.id} in ${TableName} due to existing item`,
         );
       } else {
         console.error(err);
         console.error(
-          `Failed to put ${Item.type} ${Item.id} in ${TableName} using force: ${force}`
+          `Failed to put ${Item.type} ${Item.id} in ${TableName} using force: ${force}`,
         );
       }
     });
@@ -81,7 +88,7 @@ async function translateJSON(
   sourceLang: string,
   lang: string,
   originalLoadedJSON: any,
-  ignoreKeys: string[] = []
+  ignoreKeys: string[] = [],
 ) {
   let stack: any[] = [];
 
@@ -89,7 +96,7 @@ async function translateJSON(
     value: any,
     lang: string,
     root?: any,
-    key?: any
+    key?: any,
   ) => {
     switch (typeof value) {
       case "number":
@@ -139,34 +146,39 @@ async function translateJSON(
 async function translateFile(filePath: string, fileData: any) {
   const translateConfig = TRANSLATE_CONFIG[filePath];
   if (!translateConfig) return;
-  const translatedJSONs =  await Promise.allSettled(
+  const translatedJSONs = await Promise.allSettled(
     translateConfig.targetLangs.map(async (lang) => {
       let translatedJSON = await translateJSON(
         translateConfig.sourceLang,
         lang,
         fileData,
-        translateConfig.ignoreKeys
+        translateConfig.ignoreKeys,
       );
       if (translateConfig.afterTranslate) {
         translatedJSON = translateConfig.afterTranslate(
           translatedJSON,
           translateConfig.sourceLang,
-          lang
+          lang,
         );
       }
 
       return translatedJSON;
-    })
+    }),
   );
   // log out the index of any rejected translations
   for (const [index, result] of translatedJSONs.entries()) {
-    if (result.status === 'rejected') {
-      console.error(`Failed to translate ${filePath} into ${translateConfig.targetLangs[index]}: ${result.reason}`);
+    if (result.status === "rejected") {
+      console.error(
+        `Failed to translate ${filePath} into ${translateConfig.targetLangs[index]}: ${result.reason}`,
+      );
     }
   }
   return translatedJSONs
-    .filter((result): result is PromiseFulfilledResult<TranslatedJSON> => result.status === 'fulfilled')
-    .map(result => result.value);
+    .filter(
+      (result): result is PromiseFulfilledResult<TranslatedJSON> =>
+        result.status === "fulfilled",
+    )
+    .map((result) => result.value);
 }
 
 (async () => {
@@ -182,7 +194,7 @@ async function translateFile(filePath: string, fileData: any) {
 
     const parsedData = JSON.parse(data);
     await putIfNotExists(parsedData, settingsTableName, force);
-    
+
     // Create and store translation if applicable
     const translatedJSONs = await translateFile(setting, parsedData);
     if (translatedJSONs && translatedJSONs.length > 0) {

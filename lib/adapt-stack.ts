@@ -48,6 +48,8 @@ export class AdaptStack extends cdk.Stack {
       resources: [props.logGroup.logGroupArn],
     });
 
+    // Removed as we do not use it anymore - WEISS-1369
+    /*
     const publicAssetsBucket = new AdaptS3Bucket(this, "PublicAssetsBucket", {
       bucketName: `${props.stage}-adaptpublicassetsbucket`,
       blockPublicAccess: {
@@ -71,6 +73,7 @@ export class AdaptStack extends cdk.Stack {
         },
       ],
     });
+     */
 
     const adaptAdminAuthorizerHandler = new AdaptNodeLambda(
       this,
@@ -1096,6 +1099,7 @@ export class AdaptStack extends cdk.Stack {
             environment: {
               SETTINGS_TABLE: props.dynamoTables["settingsTable"].tableName,
             },
+            bypassAuthorizer: true,
           }),
           POST: new AdaptNodeLambda(this, "updateSettingsHandler", {
             prefix: props.stage,
@@ -1121,31 +1125,31 @@ export class AdaptStack extends cdk.Stack {
             },
           }),
         },
-        "/settings/logo": {
-          POST: new AdaptNodeLambda(this, "startSettingsLogoUploadHandler", {
-            prefix: props.stage,
-            handler: "handler",
-            entry: path.join(
-              __dirname,
-              ".",
-              "./handlers/startSettingsLogoUpload/startSettingsLogoUpload.ts",
-            ),
-            attachPolicies: [
-              new Policy(this, "startSettingsLogoUpload", {
-                statements: [
-                  new PolicyStatement({
-                    effect: Effect.ALLOW,
-                    actions: ["s3:PutObject"],
-                    resources: [publicAssetsBucket.bucketArn],
-                  }),
-                ],
-              }),
-            ],
-            environment: {
-              LOGO_BUCKET: publicAssetsBucket.bucketName,
-            },
-          }),
-        },
+        // "/settings/logo": {
+        //   POST: new AdaptNodeLambda(this, "startSettingsLogoUploadHandler", {
+        //     prefix: props.stage,
+        //     handler: "handler",
+        //     entry: path.join(
+        //       __dirname,
+        //       ".",
+        //       "./handlers/startSettingsLogoUpload/startSettingsLogoUpload.ts",
+        //     ),
+        //     attachPolicies: [
+        //       new Policy(this, "startSettingsLogoUpload", {
+        //         statements: [
+        //           new PolicyStatement({
+        //             effect: Effect.ALLOW,
+        //             actions: ["s3:PutObject"],
+        //             resources: [publicAssetsBucket.bucketArn],
+        //           }),
+        //         ],
+        //       }),
+        //     ],
+        //     environment: {
+        //       LOGO_BUCKET: publicAssetsBucket.bucketName,
+        //     },
+        //   }),
+        // },
         "/settings/glossary": {
           GET: new AdaptNodeLambda(this, "getAdaptGlossary", {
             prefix: props.stage,
@@ -1169,6 +1173,7 @@ export class AdaptStack extends cdk.Stack {
             environment: {
               SETTINGS_TABLE: props.dynamoTables["settingsTable"].tableName,
             },
+            bypassAuthorizer: true,
           }),
         },
 

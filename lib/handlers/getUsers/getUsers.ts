@@ -67,7 +67,7 @@ export const handler: Handler = async (
 
         return {
           active: user.Enabled || false,
-          role: mostSeniorRole?.GroupName || '',
+          role: mostSeniorRole?.GroupName || "",
           username: user.Username,
           lastLogin: user.UserLastModifiedDate.getTime(),
           attributes,
