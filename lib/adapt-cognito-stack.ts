@@ -44,6 +44,7 @@ export class AdaptCognitoStack extends cdk.Stack {
       oAuth: {
         callbackUrls: [...localCallbackUrl, ...props.callbackUrls],
       },
+      accessTokenValidity: cdk.Duration.hours(8),
     });
     this.clientId = userPoolClient.userPoolClientId;
 

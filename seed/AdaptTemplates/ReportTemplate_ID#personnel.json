@@ -307,7 +307,7 @@
                       "chart": {
                         "dataRetrievalOperations": [
                           {
-                            "id": "specialEducationTeachers",
+                            "id": "paraprofessionals",
                             "arguments": [
                               {
                                 "type": "string",

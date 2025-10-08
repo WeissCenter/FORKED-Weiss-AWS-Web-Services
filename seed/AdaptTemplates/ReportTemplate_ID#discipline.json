@@ -274,7 +274,10 @@
     }
   },
   "metaTags": ["Part B", "Discipline"],
-  "reportingLevels": ["SEA (State Education Agency)", "LEA (Local Education Agency)"],
+  "reportingLevels": [
+    "SEA (State Education Agency)",
+    "LEA (Local Education Agency)"
+  ],
   "multiFile": false,
   "pages": [
     {
