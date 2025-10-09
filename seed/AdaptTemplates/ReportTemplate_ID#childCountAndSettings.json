@@ -8,7 +8,7 @@
     {
       "id": "allAges",
       "combined": true,
-      "description": "as of December 01, 2022:",
+      "description": "",
       "name": "All ages",
       "sections": [
         {
@@ -715,7 +715,7 @@
     {
       "id": "birthThroughTwo",
       "combined": true,
-      "description": "as of December 01, 2022",
+      "description": "",
       "name": "Ages birth through 2",
       "sections": [
         {
@@ -2013,7 +2013,7 @@
     {
       "id": "agesThreeOrOlder",
       "combined": true,
-      "description": "as of December 01, 2022",
+      "description": "",
       "name": "Ages 3 or older",
       "sections": [
         {

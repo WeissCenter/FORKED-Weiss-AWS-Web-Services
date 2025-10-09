@@ -303,7 +303,7 @@
     {
       "id": "allMetrics",
       "combined": true,
-      "description": "as of December 01, 2022:",
+      "description": "",
       "name": "Reason for Exit",
       "sections": [
         {

@@ -117,11 +117,16 @@ export class AdaptRestApi extends Construct {
     for (const [path, endpoint] of Object.entries(props.endpoints)) {
       const resource = adaptApi.root.resourceForPath(path);
       for (const method in endpoint) {
+        const lambdaFunction = this.getLambdaFunctionForPath(
+          path,
+          method as Method,
+        )!;
         resource.addMethod(
           method,
-          new LambdaIntegration(
-            this.getLambdaFunctionForPath(path, method as Method)!,
-          ),
+          new LambdaIntegration(lambdaFunction),
+          lambdaFunction.bypassAuthorizer
+            ? { authorizationType: AuthorizationType.NONE }
+            : {},
         );
       }
     }

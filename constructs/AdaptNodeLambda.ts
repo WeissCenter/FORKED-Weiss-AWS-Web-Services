@@ -14,9 +14,12 @@ export interface AdaptNodeLambdaProps extends nodejs.NodejsFunctionProps {
   prefix: string;
   attachPolicies?: Policy[];
   nodeModules?: string[];
+  bypassAuthorizer?: boolean;
 }
 
 export class AdaptNodeLambda extends nodejs.NodejsFunction {
+  public bypassAuthorizer?: boolean;
+
   constructor(scope: Construct, id: string, props: AdaptNodeLambdaProps) {
     super(scope, id, {
       // Set overridable defaults
@@ -50,5 +53,7 @@ export class AdaptNodeLambda extends nodejs.NodejsFunction {
         }
       });
     }
+
+    this.bypassAuthorizer = props.bypassAuthorizer;
   }
 }
