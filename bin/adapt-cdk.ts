@@ -12,21 +12,30 @@ import { AdaptViewerStack } from "../lib/adapt-viewer-stack";
 import { AdaptViewerSite } from "../lib/adapt-viewer-site-stack";
 
 const STAGE = process.env["STAGE"] || "dev"; // default to dev
-const DOMAIN_PREFIX = process.env["DOMAIN_PREFIX"] || `${STAGE}-AdaptAdmin`;
-const PUBLIC_VAPID_KEY = process.env["PUBLIC_VAPID_KEY"] || "";
-const PRIVATE_VAPID_KEY = process.env["PRIVATE_VAPID_KEY"] || "";
-const AWS_ACCOUNT = process.env["AWS_ACCOUNT"] || "";
-const AWS_DEFAULT_REGION = process.env["AWS_DEFAULT_REGION"] || "us-east-1";
-const HOSTED_ZONE = process.env["HOSTED_ZONE"] || "";
+const HOSTED_ZONE = process.env["HOSTED_ZONE"] || "adaptdata.org"; // default to adaptdata.org
+
 const VIEWER_SUB_DOMAIN = process.env["VIEWER_SUB_DOMAIN"] || `${STAGE}-viewer`;
+const ADMIN_SUB_DOMAIN = process.env["ADMIN_SUB_DOMAIN"] || `${STAGE}-admin`; // default to uat-admin
+const DOMAIN_PREFIX = process.env["DOMAIN_PREFIX"] || `${STAGE}-AdaptAdmin`;
+
 const CALLBACK_URL =
   process.env["CALLBACK_URL"] ||
-  `https://${DOMAIN_PREFIX}.${HOSTED_ZONE}/auth/redirect`;
+  `https://${ADMIN_SUB_DOMAIN}.${HOSTED_ZONE}/auth/redirect`;
 
-const USER_POOL_ID =
-  process.env["COGNITO_USER_POOL_ID"] || "us-east-1_SoghcU5UV"; // default to dev
-const CLIENT_ID =
-  process.env["COGNITO_CLIENT_ID"] || "75u1hs7coq05nok0dv37pvo1gu"; // default to dev
+console.log(
+  "CALLBACK_URL: ",
+  CALLBACK_URL,
+  ", HOSTED_ZONE: ",
+  HOSTED_ZONE,
+  ", ADMIN_SUB_DOMAIN: ",
+  ADMIN_SUB_DOMAIN,
+);
+
+const PUBLIC_VAPID_KEY = process.env["PUBLIC_VAPID_KEY"] || "";
+const PRIVATE_VAPID_KEY = process.env["PRIVATE_VAPID_KEY"] || "";
+
+const AWS_ACCOUNT = process.env["AWS_ACCOUNT"] || "";
+const AWS_DEFAULT_REGION = process.env["AWS_DEFAULT_REGION"] || "us-east-1";
 
 const app = new cdk.App();
 
@@ -62,8 +71,6 @@ const apiStack = new AdaptStack(app, `${STAGE}-AdaptStack`, {
   cognito: {
     userPoolId: cognitoStack.userPoolId,
     clientId: cognitoStack.clientId,
-    // userPoolId: USER_POOL_ID,
-    // clientId: CLIENT_ID,
   },
   stagingBucket: dataStack.stagingBucket,
   repoBucket: dataStack.repoBucket,
@@ -86,7 +93,6 @@ const userPermissionStack = new AdaptUserPermissionStack(
   {
     stage: STAGE,
     userPoolId: cognitoStack.userPoolId,
-    // userPoolId: USER_POOL_ID,
     restApi: apiStack.restApi,
   },
 );
@@ -105,7 +111,7 @@ const adaptViewerStack = new AdaptViewerStack(
   },
 );
 
-const staticSite = new AdaptStaticSite(app, `${STAGE}-AdaptStaticSiteStack`, {
+const adminSite = new AdaptStaticSite(app, `${STAGE}-AdaptStaticSiteStack`, {
   stage: STAGE,
 });
 

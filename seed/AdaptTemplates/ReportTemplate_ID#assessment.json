@@ -14,7 +14,7 @@
     {
       "id": "reading-lang-arts",
       "combined": true,
-      "description": "as of December 01, 2022:",
+      "description": "",
       "name": "Reading/Language Arts",
       "sections": [
         {
@@ -705,7 +705,7 @@
     {
       "id": "mathematics",
       "combined": true,
-      "description": "as of December 01, 2022:",
+      "description": "",
       "name": "Mathematics",
       "sections": [
         {
