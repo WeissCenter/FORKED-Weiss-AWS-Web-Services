@@ -13,10 +13,7 @@
             "array": true,
             "errorText": "The system has recognized that you have uploaded the wrong file.",
             "name": "file-type",
-            "value": [
-              "SEA INFANT TODD (IDEA C) EXIT",
-              "LEA INFANT TODD (IDEA C) EXIT"
-            ]
+            "value": ["SEA INFANT TODD (IDEA C) EXIT", "LEA INFANT TODD (IDEA C) EXIT"]
           },
           {
             "type": "number",

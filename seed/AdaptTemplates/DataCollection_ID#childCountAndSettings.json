@@ -6,7 +6,7 @@
   "fields": [
     {
       "id": "reportingYear",
-      "label": "For what reporting year?",
+      "label": "For what fiscal year?",
       "shortLabel": "School year",
       "required": true,
       "type": "select",
@@ -56,16 +56,7 @@
       "dataParse": {
         "from": "html",
         "config": {
-          "header": [
-            "section",
-            "gender",
-            "race",
-            "age",
-            "setting",
-            "value",
-            "comment",
-            "acknowledgement"
-          ],
+          "header": ["section", "gender", "race", "age", "setting", "value", "comment", "acknowledgement"],
           "groups": [
             {
               "id": "A",

@@ -6,7 +6,7 @@
   "fields": [
     {
       "id": "reportingYear",
-      "label": "For what reporting year?",
+      "label": "For what fiscal year?",
       "shortLabel": "School year",
       "required": true,
       "type": "select",
@@ -128,19 +128,14 @@
         "disciplinecount"
       ],
       "report_code": "c006",
-      "included_in_all": [
-        "disciplinemethodofchildrenwithdisabilities",
-        "removallength"
-      ],
+      "included_in_all": ["disciplinemethodofchildrenwithdisabilities", "removallength"],
       "category_conditions": {
         "CSA": ["ideadisabilitytype"],
         "CSB": ["race"],
         "CSC": ["sex"],
         "CSD": ["englishLearnerStatus"]
       },
-      "subtotal_columns": [
-        ["disciplinemethodofchildrenwithdisabilities", "removallength"]
-      ],
+      "subtotal_columns": [["disciplinemethodofchildrenwithdisabilities", "removallength"]],
       "validation": "FS006"
     },
     {

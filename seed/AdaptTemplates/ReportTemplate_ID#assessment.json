@@ -4,11 +4,7 @@
   "title": "IDEA Assessment for State level",
   "description": "This report represents the unduplicated number of children with disabilities grades 3 through high school who participated and received a valid score in the Reading/Language Arts and Mathematics state assessments.",
   "metaTags": ["Part B", "Assessment"],
-  "reportingLevels": [
-    "SEA (State Education Agency)",
-    "LEA (Local Education Agency)",
-    "SCH (School)"
-  ],
+  "reportingLevels": ["SEA (State Education Agency)", "LEA (Local Education Agency)", "SCH (School)"],
   "multiFile": false,
   "pages": [
     {
@@ -38,16 +34,7 @@
                       "type": "string",
                       "array": true,
                       "field": "assessmentregistrationparticipationindicator",
-                      "value": [
-                        "REGPARTWOACC",
-                        "REGPARTWACC",
-                        "PHSRGASMIWOACC",
-                        "PHSRGASMIWACC",
-                        "ALTPARTALTACH",
-                        "PARTELP",
-                        "MEDEXEMPT",
-                        "NPART"
-                      ]
+                      "value": ["REGPARTWOACC", "REGPARTWACC", "PHSRGASMIWOACC", "PHSRGASMIWACC", "ALTPARTALTACH", "PARTELP", "MEDEXEMPT", "NPART"]
                     }
                   ],
                   "function": "sum"
@@ -79,13 +66,7 @@
                           "type": "string",
                           "array": true,
                           "field": "assessmenttypeadministered",
-                          "value": [
-                            "HSREGASMTIWOACC",
-                            "HSREGASMTIWACC",
-                            "REGASSWOACC",
-                            "REGASSWACC",
-                            "ALTASSALTACH"
-                          ]
+                          "value": ["HSREGASMTIWOACC", "HSREGASMTIWACC", "REGASSWOACC", "REGASSWACC", "ALTASSALTACH"]
                         }
                       ],
                       "function": "percentage"
@@ -110,13 +91,7 @@
                           "type": "string",
                           "array": true,
                           "field": "assessmenttypeadministered",
-                          "value": [
-                            "HSREGASMTIWOACC",
-                            "HSREGASMTIWACC",
-                            "REGASSWOACC",
-                            "REGASSWACC",
-                            "ALTASSALTACH"
-                          ]
+                          "value": ["HSREGASMTIWOACC", "HSREGASMTIWACC", "REGASSWOACC", "REGASSWACC", "ALTASSALTACH"]
                         }
                       ],
                       "function": "percentage"
@@ -288,23 +263,13 @@
                       "type": "string",
                       "array": true,
                       "field": "assessmenttypeadministered",
-                      "value": [
-                        "HSREGASMTIWOACC",
-                        "HSREGASMTIWACC",
-                        "REGASSWOACC",
-                        "REGASSWACC",
-                        "ALTASSALTACH"
-                      ]
+                      "value": ["HSREGASMTIWOACC", "HSREGASMTIWACC", "REGASSWOACC", "REGASSWACC", "ALTASSALTACH"]
                     }
                   ],
                   "function": "GROUPBY",
                   "metadata": {
                     "sectionName": "Assessment Type",
-                    "filterOptions": [
-                      "REGASSWOACC",
-                      "REGASSWACC",
-                      "ALTASSALTACH"
-                    ]
+                    "filterOptions": ["REGASSWOACC", "REGASSWACC", "ALTASSALTACH"]
                   }
                 },
                 {
@@ -357,31 +322,13 @@
                       "type": "string",
                       "array": true,
                       "field": "assessmenttypeadministered",
-                      "value": [
-                        "HSREGASMTIWOACC",
-                        "HSREGASMTIWACC",
-                        "REGASSWOACC",
-                        "REGASSWACC",
-                        "ALTASSALTACH"
-                      ]
+                      "value": ["HSREGASMTIWOACC", "HSREGASMTIWACC", "REGASSWOACC", "REGASSWACC", "ALTASSALTACH"]
                     }
                   ],
                   "function": "GROUPBY",
                   "metadata": {
                     "sectionName": "Race/Ethnicity",
-                    "filterOptions": [
-                      "MA",
-                      "MAN",
-                      "MAP",
-                      "MB",
-                      "MF",
-                      "MHN",
-                      "MHL",
-                      "MM",
-                      "MNP",
-                      "MPR",
-                      "MW"
-                    ]
+                    "filterOptions": ["MA", "MAN", "MAP", "MB", "MF", "MHN", "MHL", "MM", "MNP", "MPR", "MW"]
                   }
                 },
                 {
@@ -447,13 +394,7 @@
                       "type": "string",
                       "array": true,
                       "field": "assessmenttypeadministered",
-                      "value": [
-                        "HSREGASMTIWOACC",
-                        "HSREGASMTIWACC",
-                        "REGASSWOACC",
-                        "REGASSWACC",
-                        "ALTASSALTACH"
-                      ]
+                      "value": ["HSREGASMTIWOACC", "HSREGASMTIWACC", "REGASSWOACC", "REGASSWACC", "ALTASSALTACH"]
                     }
                   ],
                   "function": "GROUPBY",
@@ -560,34 +501,13 @@
                       "type": "string",
                       "array": true,
                       "field": "assessmentregistrationparticipationindicator",
-                      "value": [
-                        "REGPARTWOACC",
-                        "REGPARTWACC",
-                        "PHSRGASMIWOACC",
-                        "PHSRGASMIWACC",
-                        "ALTPARTALTACH",
-                        "PARTELP",
-                        "MEDEXEMPT",
-                        "NPART"
-                      ]
+                      "value": ["REGPARTWOACC", "REGPARTWACC", "PHSRGASMIWOACC", "PHSRGASMIWACC", "ALTPARTALTACH", "PARTELP", "MEDEXEMPT", "NPART"]
                     }
                   ],
                   "function": "GROUPBY",
                   "metadata": {
                     "sectionName": "Race/Ethnicity",
-                    "filterOptions": [
-                      "MA",
-                      "MAN",
-                      "MAP",
-                      "MB",
-                      "MF",
-                      "MHN",
-                      "MHL",
-                      "MM",
-                      "MNP",
-                      "MPR",
-                      "MW"
-                    ]
+                    "filterOptions": ["MA", "MAN", "MAP", "MB", "MF", "MHN", "MHL", "MM", "MNP", "MPR", "MW"]
                   }
                 },
                 {
@@ -662,16 +582,7 @@
                       "type": "string",
                       "array": true,
                       "field": "assessmentregistrationparticipationindicator",
-                      "value": [
-                        "REGPARTWOACC",
-                        "REGPARTWACC",
-                        "PHSRGASMIWOACC",
-                        "PHSRGASMIWACC",
-                        "ALTPARTALTACH",
-                        "PARTELP",
-                        "MEDEXEMPT",
-                        "NPART"
-                      ]
+                      "value": ["REGPARTWOACC", "REGPARTWACC", "PHSRGASMIWOACC", "PHSRGASMIWACC", "ALTPARTALTACH", "PARTELP", "MEDEXEMPT", "NPART"]
                     }
                   ],
                   "function": "GROUPBY",
@@ -729,16 +640,7 @@
                       "type": "string",
                       "array": true,
                       "field": "assessmentregistrationparticipationindicator",
-                      "value": [
-                        "REGPARTWOACC",
-                        "REGPARTWACC",
-                        "PHSRGASMIWOACC",
-                        "PHSRGASMIWACC",
-                        "ALTPARTALTACH",
-                        "PARTELP",
-                        "MEDEXEMPT",
-                        "NPART"
-                      ]
+                      "value": ["REGPARTWOACC", "REGPARTWACC", "PHSRGASMIWOACC", "PHSRGASMIWACC", "ALTPARTALTACH", "PARTELP", "MEDEXEMPT", "NPART"]
                     }
                   ],
                   "function": "sum"
@@ -770,13 +672,7 @@
                           "type": "string",
                           "array": true,
                           "field": "assessmenttypeadministered",
-                          "value": [
-                            "HSREGASMTIWOACC",
-                            "HSREGASMTIWACC",
-                            "REGASSWOACC",
-                            "REGASSWACC",
-                            "ALTASSALTACH"
-                          ]
+                          "value": ["HSREGASMTIWOACC", "HSREGASMTIWACC", "REGASSWOACC", "REGASSWACC", "ALTASSALTACH"]
                         }
                       ],
                       "function": "percentage"
@@ -801,13 +697,7 @@
                           "type": "string",
                           "array": true,
                           "field": "assessmenttypeadministered",
-                          "value": [
-                            "HSREGASMTIWOACC",
-                            "HSREGASMTIWACC",
-                            "REGASSWOACC",
-                            "REGASSWACC",
-                            "ALTASSALTACH"
-                          ]
+                          "value": ["HSREGASMTIWOACC", "HSREGASMTIWACC", "REGASSWOACC", "REGASSWACC", "ALTASSALTACH"]
                         }
                       ],
                       "function": "percentage"
@@ -979,23 +869,13 @@
                       "type": "string",
                       "array": true,
                       "field": "assessmenttypeadministered",
-                      "value": [
-                        "HSREGASMTIWOACC",
-                        "HSREGASMTIWACC",
-                        "REGASSWOACC",
-                        "REGASSWACC",
-                        "ALTASSALTACH"
-                      ]
+                      "value": ["HSREGASMTIWOACC", "HSREGASMTIWACC", "REGASSWOACC", "REGASSWACC", "ALTASSALTACH"]
                     }
                   ],
                   "function": "GROUPBY",
                   "metadata": {
                     "sectionName": "Assessment Type",
-                    "filterOptions": [
-                      "REGASSWOACC",
-                      "REGASSWACC",
-                      "ALTASSALTACH"
-                    ]
+                    "filterOptions": ["REGASSWOACC", "REGASSWACC", "ALTASSALTACH"]
                   }
                 },
                 {
@@ -1048,31 +928,13 @@
                       "type": "string",
                       "array": true,
                       "field": "assessmenttypeadministered",
-                      "value": [
-                        "HSREGASMTIWOACC",
-                        "HSREGASMTIWACC",
-                        "REGASSWOACC",
-                        "REGASSWACC",
-                        "ALTASSALTACH"
-                      ]
+                      "value": ["HSREGASMTIWOACC", "HSREGASMTIWACC", "REGASSWOACC", "REGASSWACC", "ALTASSALTACH"]
                     }
                   ],
                   "function": "GROUPBY",
                   "metadata": {
                     "sectionName": "Race/Ethnicity",
-                    "filterOptions": [
-                      "MA",
-                      "MAN",
-                      "MAP",
-                      "MB",
-                      "MF",
-                      "MHN",
-                      "MHL",
-                      "MM",
-                      "MNP",
-                      "MPR",
-                      "MW"
-                    ]
+                    "filterOptions": ["MA", "MAN", "MAP", "MB", "MF", "MHN", "MHL", "MM", "MNP", "MPR", "MW"]
                   }
                 },
                 {
@@ -1139,13 +1001,7 @@
                       "type": "string",
                       "array": true,
                       "field": "assessmenttypeadministered",
-                      "value": [
-                        "HSREGASMTIWOACC",
-                        "HSREGASMTIWACC",
-                        "REGASSWOACC",
-                        "REGASSWACC",
-                        "ALTASSALTACH"
-                      ]
+                      "value": ["HSREGASMTIWOACC", "HSREGASMTIWACC", "REGASSWOACC", "REGASSWACC", "ALTASSALTACH"]
                     }
                   ],
                   "function": "GROUPBY",
@@ -1252,34 +1108,13 @@
                       "type": "string",
                       "array": true,
                       "field": "assessmentregistrationparticipationindicator",
-                      "value": [
-                        "REGPARTWOACC",
-                        "REGPARTWACC",
-                        "PHSRGASMIWOACC",
-                        "PHSRGASMIWACC",
-                        "ALTPARTALTACH",
-                        "PARTELP",
-                        "MEDEXEMPT",
-                        "NPART"
-                      ]
+                      "value": ["REGPARTWOACC", "REGPARTWACC", "PHSRGASMIWOACC", "PHSRGASMIWACC", "ALTPARTALTACH", "PARTELP", "MEDEXEMPT", "NPART"]
                     }
                   ],
                   "function": "GROUPBY",
                   "metadata": {
                     "sectionName": "Race/Ethnicity",
-                    "filterOptions": [
-                      "MA",
-                      "MAN",
-                      "MAP",
-                      "MB",
-                      "MF",
-                      "MHN",
-                      "MHL",
-                      "MM",
-                      "MNP",
-                      "MPR",
-                      "MW"
-                    ]
+                    "filterOptions": ["MA", "MAN", "MAP", "MB", "MF", "MHN", "MHL", "MM", "MNP", "MPR", "MW"]
                   }
                 },
                 {
@@ -1354,16 +1189,7 @@
                       "type": "string",
                       "array": true,
                       "field": "assessmentregistrationparticipationindicator",
-                      "value": [
-                        "REGPARTWOACC",
-                        "PHSRGASMIWOACC",
-                        "PHSRGASMIWACC",
-                        "REGPARTWACC",
-                        "ALTPARTALTACH",
-                        "PARTELP",
-                        "MEDEXEMPT",
-                        "NPART"
-                      ]
+                      "value": ["REGPARTWOACC", "PHSRGASMIWOACC", "PHSRGASMIWACC", "REGPARTWACC", "ALTPARTALTACH", "PARTELP", "MEDEXEMPT", "NPART"]
                     }
                   ],
                   "function": "GROUPBY",
@@ -1400,13 +1226,6 @@
     "frequencyColumns": ["assessmentcount"],
     "parentOrganization": "file",
     "required": true,
-    "sensitiveColumns": [
-      "assessmenttypeadministered",
-      "proficiencystatus",
-      "race",
-      "gradelevel",
-      "assessmentregistrationparticipationindicator",
-      "sex"
-    ]
+    "sensitiveColumns": ["assessmenttypeadministered", "proficiencystatus", "race", "gradelevel", "assessmentregistrationparticipationindicator", "sex"]
   }
 }

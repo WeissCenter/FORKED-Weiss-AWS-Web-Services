@@ -6,7 +6,7 @@
     {
       "type": "select",
       "id": "reportingYear",
-      "label": "For what reporting year?",
+      "label": "For what fiscal year?",
       "options": [
         {
           "label": "2024-2025",
@@ -97,11 +97,7 @@
         "query": "select * from RDS.ReportEDFactsK12StudentAssessments where ReportCode = 'c175' and ReportLevel = 'sea' and ReportYear = ${reportingYear}"
       },
       "description": "The unduplicated number of students in grades 3 through 8 and in high school who completed the state assessment(s) in mathematics and received a valid score.",
-      "included_in_all": [
-        "gradelevel",
-        "proficiencystatus",
-        "assessmenttypeadministered"
-      ],
+      "included_in_all": ["gradelevel", "proficiencystatus", "assessmenttypeadministered"],
       "name": "FS175 - Academic Achievement in Mathematics",
       "report_code": "c175",
       "report_levels": {
@@ -109,9 +105,7 @@
         "sch": "SCHOOL STUDENT PERFORMANCE MATH",
         "sea": "SEA STUDENT PERFORMANCE MATH"
       },
-      "subtotal_columns": [
-        ["gradelevel", "proficiencystatus", "assessmenttypeadministered"]
-      ],
+      "subtotal_columns": [["gradelevel", "proficiencystatus", "assessmenttypeadministered"]],
       "validation": "FS175"
     },
     {
@@ -168,11 +162,7 @@
         "query": "select * from RDS.ReportEDFactsK12StudentAssessments where ReportCode = 'c178' and ReportLevel = 'sea' and ReportYear = ${reportingYear}"
       },
       "description": "The unduplicated number of students in grades 3 through 8 and in high school who completed the state assessment(s) in reading/language arts and received a valid score.",
-      "included_in_all": [
-        "gradelevel",
-        "proficiencystatus",
-        "assessmenttypeadministered"
-      ],
+      "included_in_all": ["gradelevel", "proficiencystatus", "assessmenttypeadministered"],
       "name": "FS178 - Academic Achievement in Reading/Language Arts",
       "report_code": "c178",
       "report_levels": {
@@ -180,9 +170,7 @@
         "sch": "SCHOOL STUDENT PERFORMANCE READING LANGUAGE ARTS",
         "sea": "SEA STUDENT PERFORMANCE READING LANGUAGE ARTS"
       },
-      "subtotal_columns": [
-        ["gradelevel", "proficiencystatus", "assessmenttypeadministered"]
-      ],
+      "subtotal_columns": [["gradelevel", "proficiencystatus", "assessmenttypeadministered"]],
       "validation": "FS178"
     },
     {
@@ -239,10 +227,7 @@
         "query": "select * from RDS.ReportEDFactsK12StudentAssessments where ReportCode = 'c185' and ReportLevel = 'sea' and ReportYear = ${reportingYear}"
       },
       "description": "The unduplicated number of students enrolled in grades 3 through 8 and high school students expected to participate in an end-of-grade or end-of-course assessment during the period of the state assessment(s) in mathematics.",
-      "included_in_all": [
-        "assessmentregistrationparticipationindicator",
-        "gradelevel"
-      ],
+      "included_in_all": ["assessmentregistrationparticipationindicator", "gradelevel"],
       "name": "FS185 - Assessment Participation in Mathematics",
       "previewHeaders": [
         "file_record_number",
@@ -275,9 +260,7 @@
         "sch": "SCHOOL MATH ASSESSMENT PARTICIPATION",
         "sea": "SEA MATH ASSESSMENT PARTICIPATION"
       },
-      "subtotal_columns": [
-        ["gradelevel", "assessmentregistrationparticipationindicator"]
-      ],
+      "subtotal_columns": [["gradelevel", "assessmentregistrationparticipationindicator"]],
       "validation": "FS185"
     },
     {
@@ -334,10 +317,7 @@
         "query": "select * from RDS.ReportEDFactsK12StudentAssessments where ReportCode = 'c188' and ReportLevel = 'sea' and ReportYear = ${reportingYear}"
       },
       "description": "The unduplicated number of students enrolled in grades 3 through 8 and high school students expected to participate in an end-of-grade or end-of-course assessment during the period of the state assessment(s) in reading/language arts.",
-      "included_in_all": [
-        "gradelevel",
-        "assessmentregistrationparticipationindicator"
-      ],
+      "included_in_all": ["gradelevel", "assessmentregistrationparticipationindicator"],
       "name": "FS188 - Assessment Participation in Reading/Language Arts",
       "previewHeaders": [
         "file_record_number",
@@ -370,9 +350,7 @@
         "sch": "SCHOOL RLA ASSESSMENT PARTICIPATION",
         "sea": "SEA RLA ASSESSMENT PARTICIPATION"
       },
-      "subtotal_columns": [
-        ["gradelevel", "assessmentregistrationparticipationindicator"]
-      ],
+      "subtotal_columns": [["gradelevel", "assessmentregistrationparticipationindicator"]],
       "validation": "FS188"
     }
   ],

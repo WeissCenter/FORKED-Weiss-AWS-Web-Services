@@ -6,7 +6,7 @@
     {
       "type": "select",
       "id": "reportingYear",
-      "label": "For what reporting year?",
+      "label": "For what fiscal year?",
       "options": [
         {
           "label": "2024-2025",
@@ -46,10 +46,7 @@
         "fileInputHint": "Only CSV files are accepted."
       },
       "category_conditions": {
-        "CSA": [
-          "specialeducationagegrouptaught",
-          "specialeducationteacherqualificationstatus"
-        ]
+        "CSA": ["specialeducationagegrouptaught", "specialeducationteacherqualificationstatus"]
       },
       "columns": [
         "fileRecordNumber",
@@ -77,10 +74,7 @@
         "lea": "LEA SPECIAL EDUCATION TEACHER",
         "sea": "SEA SPECIAL EDUCATION TEACHER"
       },
-      "subtotal_columns": [
-        ["specialeducationagegrouptaught"],
-        ["specialeducationteacherqualificationstatus"]
-      ],
+      "subtotal_columns": [["specialeducationagegrouptaught"], ["specialeducationteacherqualificationstatus"]],
       "validation": "FS070"
     },
     {
@@ -90,10 +84,7 @@
         "fileInputHint": "Only CSV files are accepted."
       },
       "category_conditions": {
-        "CSA": [
-          "specialeducationsupportservicescategory",
-          "edfactscertificationstatus"
-        ]
+        "CSA": ["specialeducationsupportservicescategory", "edfactscertificationstatus"]
       },
       "columns": [
         "fileRecordNumber",
@@ -158,10 +149,7 @@
         "lea": "LEA SPECIAL ED PARAPROFESSIONALS",
         "sea": "SEA SPECIAL ED PARAPROFESSIONALS"
       },
-      "subtotal_columns": [
-        ["specialeducationagegrouptaught"],
-        ["edfactscertificationstatus"]
-      ],
+      "subtotal_columns": [["specialeducationagegrouptaught"], ["edfactscertificationstatus"]],
       "validation": "FS112"
     }
   ],

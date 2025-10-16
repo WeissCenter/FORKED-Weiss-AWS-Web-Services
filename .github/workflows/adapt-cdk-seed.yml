@@ -4,6 +4,9 @@ on:
   push:
     paths: "seed/**"
     branches:
+      - "dev"
+      - "qa"
+      - "uat"
       - "main" # prod
 jobs:
   dynamodb-seeding:
