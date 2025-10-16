@@ -7,7 +7,7 @@
     {
       "type": "select",
       "id": "reportingYear",
-      "label": "For what reporting year?",
+      "label": "For what fiscal year?",
       "options": [
         {
           "label": "2024-2025",
@@ -90,14 +90,7 @@
         "lea": "LEA CHILDREN WITH DISAB (IDEA) EXITING SPEC ED",
         "sea": "SEA CHILDREN WITH DISAB (IDEA) EXITING SPEC ED"
       },
-      "subtotal_columns": [
-        ["specialeducationexitreason"],
-        ["age"],
-        ["race"],
-        ["sex"],
-        ["englishlearnerstatus"],
-        ["ideadisabilitytype"]
-      ],
+      "subtotal_columns": [["specialeducationexitreason"], ["age"], ["race"], ["sex"], ["englishlearnerstatus"], ["ideadisabilitytype"]],
       "validation": "FS009"
     }
   ]

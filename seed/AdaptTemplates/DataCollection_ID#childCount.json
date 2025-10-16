@@ -6,7 +6,7 @@
   "fields": [
     {
       "id": "reportingYear",
-      "label": "For what reporting year?",
+      "label": "For what fiscal year?",
       "shortLabel": "School year",
       "required": true,
       "type": "select",

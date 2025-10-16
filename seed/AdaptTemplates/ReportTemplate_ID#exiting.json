@@ -294,10 +294,7 @@
     }
   },
   "metaTags": ["Part B", "Exiting"],
-  "reportingLevels": [
-    "SEA (State Education Agency)",
-    "LEA (Local Education Agency)"
-  ],
+  "reportingLevels": ["SEA (State Education Agency)", "LEA (Local Education Agency)"],
   "multiFile": false,
   "pages": [
     {
@@ -477,14 +474,7 @@
     "frequencyColumns": ["StudentCount"],
     "parentOrganization": "file",
     "required": true,
-    "sensitiveColumns": [
-      "specialeducationexitreason",
-      "race",
-      "ideadisabilitytype",
-      "age",
-      "sex",
-      "englishlearnerstatus"
-    ]
+    "sensitiveColumns": ["specialeducationexitreason", "race", "ideadisabilitytype", "age", "sex", "englishlearnerstatus"]
   },
   "title": "Children with Disabilities (IDEA) Exiting"
 }

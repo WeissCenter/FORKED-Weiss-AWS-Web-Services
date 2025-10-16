@@ -11,25 +11,17 @@ import { AdaptStaticSite } from "../lib/adapt-static-site-stack";
 import { AdaptViewerStack } from "../lib/adapt-viewer-stack";
 import { AdaptViewerSite } from "../lib/adapt-viewer-site-stack";
 
-const STAGE = process.env["STAGE"] || "dev"; // default to dev
+const AWS_RESOURCE_UNIQUE_ID = process.env["AWS_RESOURCE_UNIQUE_ID"] || "weiss-default"; // default to weiss-default
+const ENVIRONMENT_BRANCH_NAME = process.env["ENVIRONMENT_BRANCH_NAME"] || "dev"; // default to dev
 const HOSTED_ZONE = process.env["HOSTED_ZONE"] || "adaptdata.org"; // default to adaptdata.org
+const HOSTED_ZONE_CERT_ARN = process.env["HOSTED_ZONE_CERT_ARN"] || "";
+const VIEWER_SUB_DOMAIN = process.env["VIEWER_SUB_DOMAIN"] || `${AWS_RESOURCE_UNIQUE_ID}-viewer`;
+const ADMIN_SUB_DOMAIN = process.env["ADMIN_SUB_DOMAIN"] || `${AWS_RESOURCE_UNIQUE_ID}-admin`; // default to uat-admin
+const DOMAIN_PREFIX = process.env["DOMAIN_PREFIX"] || `${AWS_RESOURCE_UNIQUE_ID}-AdaptAdmin`;
 
-const VIEWER_SUB_DOMAIN = process.env["VIEWER_SUB_DOMAIN"] || `${STAGE}-viewer`;
-const ADMIN_SUB_DOMAIN = process.env["ADMIN_SUB_DOMAIN"] || `${STAGE}-admin`; // default to uat-admin
-const DOMAIN_PREFIX = process.env["DOMAIN_PREFIX"] || `${STAGE}-AdaptAdmin`;
+const CALLBACK_URL = process.env["CALLBACK_URL"] || `https://${ADMIN_SUB_DOMAIN}.${HOSTED_ZONE}/auth/redirect`;
 
-const CALLBACK_URL =
-  process.env["CALLBACK_URL"] ||
-  `https://${ADMIN_SUB_DOMAIN}.${HOSTED_ZONE}/auth/redirect`;
-
-console.log(
-  "CALLBACK_URL: ",
-  CALLBACK_URL,
-  ", HOSTED_ZONE: ",
-  HOSTED_ZONE,
-  ", ADMIN_SUB_DOMAIN: ",
-  ADMIN_SUB_DOMAIN,
-);
+console.log("CALLBACK_URL: ", CALLBACK_URL, ", HOSTED_ZONE: ", HOSTED_ZONE, ", ADMIN_SUB_DOMAIN: ", ADMIN_SUB_DOMAIN, ", AWS_DEFAULT_REGION: ", process.env["AWS_DEFAULT_REGION"]);
 
 const PUBLIC_VAPID_KEY = process.env["PUBLIC_VAPID_KEY"] || "";
 const PRIVATE_VAPID_KEY = process.env["PRIVATE_VAPID_KEY"] || "";
@@ -39,38 +31,38 @@ const AWS_DEFAULT_REGION = process.env["AWS_DEFAULT_REGION"] || "us-east-1";
 
 const app = new cdk.App();
 
-const cognitoStack = new AdaptCognitoStack(app, `${STAGE}-AdaptCognitoStack`, {
-  stage: STAGE,
+const cognitoStack = new AdaptCognitoStack(app, `${AWS_RESOURCE_UNIQUE_ID}-AdaptCognitoStack`, {
+  stage: AWS_RESOURCE_UNIQUE_ID,
   domainPrefix: DOMAIN_PREFIX,
-  includeLocalCallbackUrl: STAGE === "dev",
-  callbackUrls: [CALLBACK_URL],
+  includeLocalCallbackUrl: ENVIRONMENT_BRANCH_NAME === "dev", // adds localhost:4200 for CORS access to local development
+  callbackUrls: [CALLBACK_URL]
 });
 
-const loggingStack = new AdaptLoggingStack(app, `${STAGE}-AdaptLoggingStack`, {
-  stage: STAGE,
+const loggingStack = new AdaptLoggingStack(app, `${AWS_RESOURCE_UNIQUE_ID}-AdaptLoggingStack`, {
+  stage: AWS_RESOURCE_UNIQUE_ID
 });
 
-const dynamoStack = new AdaptDynamoStack(app, `${STAGE}-AdaptDynamoStack`, {
-  stage: STAGE,
+const dynamoStack = new AdaptDynamoStack(app, `${AWS_RESOURCE_UNIQUE_ID}-AdaptDynamoStack`, {
+  stage: AWS_RESOURCE_UNIQUE_ID
 });
 
-const dataStack = new AdaptDataStack(app, `${STAGE}-AdaptDataStack`, {
-  stage: STAGE,
+const dataStack = new AdaptDataStack(app, `${AWS_RESOURCE_UNIQUE_ID}-AdaptDataStack`, {
+  stage: AWS_RESOURCE_UNIQUE_ID,
   dynamoTables: dynamoStack.tables,
   vapidKeys: {
     publicKey: PUBLIC_VAPID_KEY,
-    privateKey: PRIVATE_VAPID_KEY,
+    privateKey: PRIVATE_VAPID_KEY
   },
-  logGroup: loggingStack.logGroup,
+  logGroup: loggingStack.logGroup
 });
 
 // stack for adapt backend resources
-const apiStack = new AdaptStack(app, `${STAGE}-AdaptStack`, {
-  stage: STAGE,
+const apiStack = new AdaptStack(app, `${AWS_RESOURCE_UNIQUE_ID}-AdaptStack`, {
+  stage: AWS_RESOURCE_UNIQUE_ID,
   dynamoTables: dynamoStack.tables,
   cognito: {
     userPoolId: cognitoStack.userPoolId,
-    clientId: cognitoStack.clientId,
+    clientId: cognitoStack.clientId
   },
   stagingBucket: dataStack.stagingBucket,
   repoBucket: dataStack.repoBucket,
@@ -84,40 +76,33 @@ const apiStack = new AdaptStack(app, `${STAGE}-AdaptStack`, {
   suppressionServiceFunction: dataStack.suppressionServiceFunctionName,
   logGroup: loggingStack.logGroup,
   adminReportCache: dataStack.adminReportCache,
-  viewerReportCache: dataStack.viewerReportCache,
+  viewerReportCache: dataStack.viewerReportCache
 });
 
-const userPermissionStack = new AdaptUserPermissionStack(
-  app,
-  `${STAGE}-AdaptUserPermissionStack`,
-  {
-    stage: STAGE,
-    userPoolId: cognitoStack.userPoolId,
-    restApi: apiStack.restApi,
-  },
-);
-
-const adaptViewerStack = new AdaptViewerStack(
-  app,
-  `${STAGE}-AdaptViewerStack`,
-  {
-    dynamoTables: dynamoStack.tables,
-    stage: STAGE,
-    logGroup: loggingStack.logGroup,
-    dataCatalog: dataStack.dataCatalog,
-    queryResultBucket: dataStack.queryResultBucket,
-    renderTemplateServiceFunction: dataStack.renderTemplateServiceFunction,
-    reportCache: dataStack.viewerReportCache,
-  },
-);
-
-const adminSite = new AdaptStaticSite(app, `${STAGE}-AdaptStaticSiteStack`, {
-  stage: STAGE,
+const userPermissionStack = new AdaptUserPermissionStack(app, `${AWS_RESOURCE_UNIQUE_ID}-AdaptUserPermissionStack`, {
+  stage: AWS_RESOURCE_UNIQUE_ID,
+  userPoolId: cognitoStack.userPoolId,
+  restApi: apiStack.restApi
 });
 
-const viewerSite = new AdaptViewerSite(app, `${STAGE}-ViewerSiteStack`, {
-  stage: STAGE,
+const adaptViewerStack = new AdaptViewerStack(app, `${AWS_RESOURCE_UNIQUE_ID}-AdaptViewerStack`, {
+  dynamoTables: dynamoStack.tables,
+  stage: AWS_RESOURCE_UNIQUE_ID,
+  logGroup: loggingStack.logGroup,
+  dataCatalog: dataStack.dataCatalog,
+  queryResultBucket: dataStack.queryResultBucket,
+  renderTemplateServiceFunction: dataStack.renderTemplateServiceFunction,
+  reportCache: dataStack.viewerReportCache
+});
+
+const adminSite = new AdaptStaticSite(app, `${AWS_RESOURCE_UNIQUE_ID}-AdaptStaticSiteStack`, {
+  stage: AWS_RESOURCE_UNIQUE_ID
+});
+
+const viewerSite = new AdaptViewerSite(app, `${AWS_RESOURCE_UNIQUE_ID}-ViewerSiteStack`, {
+  stage: AWS_RESOURCE_UNIQUE_ID,
   hostedZone: HOSTED_ZONE,
   subDomain: VIEWER_SUB_DOMAIN,
-  env: { account: AWS_ACCOUNT, region: AWS_DEFAULT_REGION },
+  certificateArn: HOSTED_ZONE_CERT_ARN,
+  env: { account: AWS_ACCOUNT, region: AWS_DEFAULT_REGION }
 });

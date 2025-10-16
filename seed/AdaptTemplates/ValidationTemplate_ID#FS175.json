@@ -20,11 +20,7 @@
             "errorText": "The system has recognized that you have uploaded the wrong file.",
             "type": "string",
             "array": true,
-            "value": [
-              "SEA STUDENT PERFORMANCE MATH",
-              "LEA STUDENT PERFORMANCE MATH",
-              "SCHOOL STUDENT PERFORMANCE MATH"
-            ]
+            "value": ["SEA STUDENT PERFORMANCE MATH", "LEA STUDENT PERFORMANCE MATH", "SCHOOL STUDENT PERFORMANCE MATH"]
           },
           {
             "name": "total-records-in-file",

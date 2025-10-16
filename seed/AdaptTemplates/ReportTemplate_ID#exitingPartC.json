@@ -333,11 +333,7 @@
     "frequencyColumns": ["infantsandtoddlerscount"],
     "parentOrganization": "file",
     "required": true,
-    "sensitiveColumns": [
-      "reasonfornolongerreceivingservices",
-      "racialEthnic",
-      "sex"
-    ]
+    "sensitiveColumns": ["reasonfornolongerreceivingservices", "racialEthnic", "sex"]
   },
   "title": "Infants and Toddlers with Disabilities (IDEA Part C) Exiting"
 }
