@@ -1,14 +1,5 @@
 import { APIGatewayEvent, Context, Handler } from "aws-lambda";
-import {
-  CreateBackendResponse,
-  CreateBackendErrorResponse,
-  aws_generateDailyLogStreamID,
-  aws_LogEvent,
-  createUpdateItemFromObject,
-  EventType,
-  getUserDataFromEvent,
-  IReport
-} from "../../../libs/types/src";
+import { CreateBackendResponse, CreateBackendErrorResponse, aws_generateDailyLogStreamID, aws_LogEvent, createUpdateItemFromObject, EventType, getUserDataFromEvent, IReport } from "../../../libs/types/src";
 import { CloudWatchLogsClient } from "@aws-sdk/client-cloudwatch-logs";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocument } from "@aws-sdk/lib-dynamodb";

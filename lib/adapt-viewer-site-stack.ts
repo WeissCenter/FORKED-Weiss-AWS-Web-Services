@@ -139,7 +139,7 @@ export class AdaptViewerSite extends cdk.Stack {
     //   )
     // });
 
-    const issueCacheInvalidationHandler = new AdaptNodeLambda(this, `${id}-issueCacheInvalidation`, {
+    const issueCacheInvalidationHandler = new AdaptNodeLambda(this, "issueCacheInvalidation", {
       prefix: props.stage,
       handler: "handler",
       entry: path.join(__dirname, ".", "./handlers/cfInvalidate/cfInvalidate.ts"),

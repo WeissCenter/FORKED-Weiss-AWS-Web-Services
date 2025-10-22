@@ -1,14 +1,5 @@
 import { APIGatewayEvent, Context, Handler } from "aws-lambda";
-import {
-  CreateBackendResponse,
-  CreateBackendErrorResponse,
-  aws_generateDailyLogStreamID,
-  aws_LogEvent,
-  DataSource,
-  DataSourceConnectionInfo,
-  EventType,
-  getUserDataFromEvent
-} from "../../../libs/types/src";
+import { CreateBackendResponse, CreateBackendErrorResponse, aws_generateDailyLogStreamID, aws_LogEvent, DataSource, DataSourceConnectionInfo, EventType, getUserDataFromEvent } from "../../../libs/types/src";
 import { CloudWatchLogsClient } from "@aws-sdk/client-cloudwatch-logs";
 import { DynamoDBClient, ReturnValue } from "@aws-sdk/client-dynamodb";
 import { GlueClient, UpdateConnectionCommand } from "@aws-sdk/client-glue";

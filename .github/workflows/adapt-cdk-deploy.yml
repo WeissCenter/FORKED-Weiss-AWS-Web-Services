@@ -11,7 +11,6 @@ on:
       - "main" # prod
 
 env:
-  ENVIRONMENT_BRANCH_NAME: ${{ vars.ENVIRONMENT_BRANCH_NAME }}
   AWS_REGION: ${{ vars.AWS_REGION }}
   AWS_RESOURCE_UNIQUE_ID: ${{ vars.AWS_RESOURCE_UNIQUE_ID }}
   AWS_ACCOUNT_NO: ${{ vars.AWS_ACCOUNT_NO }}
@@ -55,7 +54,7 @@ jobs:
         with:
           node-version: "20"
       - run: npm install && npm run build
-      - name: cdk deploy
+      - name: cdk deploy # will execute the file adapt-cdk.ts in the bin folder
         uses: youyo/aws-cdk-github-actions@v2
         with:
           cdk_subcommand: "deploy"

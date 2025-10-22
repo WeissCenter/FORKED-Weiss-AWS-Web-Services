@@ -12,7 +12,6 @@ import { AdaptViewerStack } from "../lib/adapt-viewer-stack";
 import { AdaptViewerSite } from "../lib/adapt-viewer-site-stack";
 
 const AWS_RESOURCE_UNIQUE_ID = process.env["AWS_RESOURCE_UNIQUE_ID"] || "weiss-default"; // default to weiss-default
-const ENVIRONMENT_BRANCH_NAME = process.env["ENVIRONMENT_BRANCH_NAME"] || "dev"; // default to dev
 const HOSTED_ZONE = process.env["HOSTED_ZONE"] || "adaptdata.org"; // default to adaptdata.org
 const HOSTED_ZONE_CERT_ARN = process.env["HOSTED_ZONE_CERT_ARN"] || "";
 const VIEWER_SUB_DOMAIN = process.env["VIEWER_SUB_DOMAIN"] || `${AWS_RESOURCE_UNIQUE_ID}-viewer`;
@@ -34,7 +33,7 @@ const app = new cdk.App();
 const cognitoStack = new AdaptCognitoStack(app, `${AWS_RESOURCE_UNIQUE_ID}-AdaptCognitoStack`, {
   stage: AWS_RESOURCE_UNIQUE_ID,
   domainPrefix: DOMAIN_PREFIX,
-  includeLocalCallbackUrl: ENVIRONMENT_BRANCH_NAME === "dev", // adds localhost:4200 for CORS access to local development
+  includeLocalCallbackUrl: AWS_RESOURCE_UNIQUE_ID === "dev", // adds localhost:4200 for CORS access to local development
   callbackUrls: [CALLBACK_URL]
 });
 
