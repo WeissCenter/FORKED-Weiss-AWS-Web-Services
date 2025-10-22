@@ -5,15 +5,7 @@ export function aws_generateDailyLogStreamID() {
   return `${new Date().toLocaleDateString("en-us", { day: "numeric", year: "numeric", month: "numeric" })}-daily-logs`;
 }
 
-export async function aws_LogEvent(
-  cloudwatch: CloudWatchLogsClient,
-  group: string,
-  stream: string,
-  userID: string,
-  eventType: EventType,
-  event: string,
-  extraMeta: { label: string; value: string }[] = []
-) {
+export async function aws_LogEvent(cloudwatch: CloudWatchLogsClient, group: string, stream: string, userID: string, eventType: EventType, event: string, extraMeta: { label: string; value: string }[] = []) {
   const checkIfLogStreamExistsCommand = new DescribeLogStreamsCommand({
     logGroupName: group,
     logStreamNamePrefix: stream

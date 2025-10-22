@@ -19,7 +19,7 @@ const TARGET_LANGUAGES = (() => {
 // In the internal private repo adapt-cdk the generic and custom glossary files are the same. The generic glossary file will always be a reference and
 // will never be used anywhere in the application other than for comparison with the custom glossary file.
 
-console.log("GLOSSARY_TERMS: ", process.env.GLOSSARY_TERMS, ", process.env.AWS_DEFAULT_REGION: ", process.env.AWS_DEFAULT_REGION, ", process.env.ENVIRONMENT: ", process.env.ENVIRONMENT);
+console.log("GLOSSARY_TERMS: ", process.env.GLOSSARY_TERMS, ", process.env.AWS_DEFAULT_REGION: ", process.env.AWS_DEFAULT_REGION, ", process.env.AWS_RESOURCE_UNIQUE_ID: ", process.env.AWS_RESOURCE_UNIQUE_ID);
 
 const TRANSLATE_CONFIG: Record<FilePath, FileTranslateConfig> = {
   [`seed/AdaptSettings/${process.env.GLOSSARY_TERMS}`]: {
@@ -148,10 +148,10 @@ async function translateFile(filePath: string, fileData: any) {
 
 (async () => {
   const settingJSONs = globSync("./seed/AdaptSettings/*.json");
-  const settingsTableName = `${process.env.ENVIRONMENT}-AdaptSettings`;
+  const settingsTableName = `${process.env.AWS_RESOURCE_UNIQUE_ID}-AdaptSettings`;
 
   const templateJSONs = globSync("./seed/AdaptTemplates/*.json");
-  const templatesTableName = `${process.env.ENVIRONMENT}-AdaptTemplates`;
+  const templatesTableName = `${process.env.AWS_RESOURCE_UNIQUE_ID}-AdaptTemplates`;
 
   // settingsFilePath: seed/AdaptSettings/settings.json
   for (const settingsFilePath of settingJSONs) {

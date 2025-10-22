@@ -26,7 +26,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: ${{ vars.AWS_REGION }}
-          ENVIRONMENT: ${{ vars.ENVIRONMENT_BRANCH_NAME }}
+          AWS_RESOURCE_UNIQUE_ID: ${{ vars.AWS_RESOURCE_UNIQUE_ID }}
           # "state-custom-glossary.json" or "ceds-generic-glossary.json"
           GLOSSARY_TERMS: ${{ vars.GLOSSARY_TERMS }}
         run: node ./seed/seed.js

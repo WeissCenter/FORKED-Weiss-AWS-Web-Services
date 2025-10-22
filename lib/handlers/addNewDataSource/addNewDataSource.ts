@@ -4,15 +4,7 @@ import { CloudWatchLogsClient } from "@aws-sdk/client-cloudwatch-logs";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocument } from "@aws-sdk/lib-dynamodb";
 import { SecretsManagerClient, CreateSecretCommand } from "@aws-sdk/client-secrets-manager";
-import {
-  GlueClient,
-  CreateConnectionCommand,
-  CreateCrawlerCommand,
-  DeleteCrawlerCommand,
-  DeleteConnectionCommand,
-  CreateConnectionCommandOutput,
-  CreateCrawlerCommandOutput
-} from "@aws-sdk/client-glue";
+import { GlueClient, CreateConnectionCommand, CreateCrawlerCommand, DeleteCrawlerCommand, DeleteConnectionCommand, CreateConnectionCommandOutput, CreateCrawlerCommandOutput } from "@aws-sdk/client-glue";
 
 import { randomUUID } from "crypto";
 

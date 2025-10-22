@@ -25,7 +25,7 @@ export class AdaptNodeLambda extends nodejs.NodejsFunction {
       ...props,
       // Set non-overridable defaults (these must be last and defined in the omit props list)
       runtime: Runtime.NODEJS_20_X,
-      functionName: `${props.prefix}-${id}`,
+      functionName: `${props.prefix}-${id}`, // The function name cannot be more than 64 characters
       bundling: {
         charset: Charset.UTF8,
         format: OutputFormat.CJS,
