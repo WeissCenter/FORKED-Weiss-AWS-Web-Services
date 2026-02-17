@@ -126,7 +126,7 @@ export class AdaptViewerStack extends cdk.Stack {
                 })
               ]
             }),
-            cache: { enabled: true, ttl: Duration.minutes(5) }
+            //cache: { enabled: true, ttl: Duration.minutes(5) }
           }
         },
         "/reports/{slug}": {
