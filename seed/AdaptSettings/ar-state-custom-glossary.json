@@ -135,7 +135,7 @@
     "SPL": {
       "label": "Service Provider Location (Other)",
       "description": "Are not in regular early childhood programs",
-      "definition": "A location other than a pre-school classroom, seperate school, or residential facility where children ages 3 to 5 receive special education and related services."
+      "definition": "A location other than a pre-school classroom, separate school, or residential facility where children ages 3 to 5 receive special education and related services."
     },
     "home": {
       "label": "Home",
@@ -458,7 +458,7 @@
     },
     "REMHO": {
       "label": "Removed to an IAES by a hearing officer",
-      "definition": "A student with disabilities is moved to a temporary educational setting away from the student's current placement by school staff because they have drugs, weapons, or have caused serious injury to someone else."
+      "definition": "A student with disabilities is moved to a temporary educational setting away from the student's current placement by a Hearing Officer because of a strong chance they could hurt themselves or others."
     },
     "INSCHOOL": {
       "label": "In-School Suspensions",
@@ -494,11 +494,11 @@
     },
     "SERVPROV": {
       "label": "Received educational services",
-      "definition": "A student with disabilities recieved educational services while they were removed from the regular school program for discipline reasons."
+      "definition": "A student with disabilities received educational services while they were removed from the regular school program for discipline reasons."
     },
     "SERVNOTPROV": {
       "label": "Did not receive educational services",
-      "definition": "A student with disabilities did not recieve educational services while they were removed from the regular school program for discipline reasons."
+      "definition": "A student with disabilities did not receive educational services while they were removed from the regular school program for discipline reasons."
     },
     "SPEDTCHFULCRT": {
       "label": "Fully certified",
@@ -506,7 +506,7 @@
     },
     "SPEDTCHNFULCRT": {
       "label": "Not fully certified",
-      "definition": "This means a teacher is not certifed to provide special education to students with disabilities."
+      "definition": "This means a teacher is not certified to provide special education to students with disabilities."
     },
     "AUDIO": {
       "label": "Audiologists",
